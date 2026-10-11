@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --gold-primary: #DFB45E;
+    --gold-light: #FCE9B0;
+    --gold-mid: #E2BD68;
+    --gold-dark: #BA8936;
+  }
+
+  body {
+    background-color: #08090D;
+    color: #F3F4F6;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, .font-serif-luxury {
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Custom Gold Shimmer & Gradients */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #DFB45E 0%, #FCE9B0 25%, #E2BD68 50%, #D4A74E 80%, #BA8936 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-border {
+  border-image: linear-gradient(135deg, #DFB45E, #BA8936) 1;
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px -5px rgba(223, 180, 94, 0.25);
+}
+
+.gold-subtle-glow {
+  box-shadow: 0 0 15px -3px rgba(223, 180, 94, 0.15);
+}
+
+/* Print specific rules for luxury voucher */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .printable-card {
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    page-break-inside: avoid;
+  }
+}

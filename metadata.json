@@ -1,0 +1,8 @@
+{
+  "name": "Traveling with King",
+  "description": "Bespoke Cape Town & Western Cape private tour and multi-day itinerary builder with King, your executive transport provider and local guide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

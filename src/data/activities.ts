@@ -1,0 +1,393 @@
+export interface Activity {
+  id: string;
+  name: string;
+  subtitle: string;
+  category: 'Wine & Culinary' | 'Ocean & Coastal' | 'Adrenaline & Air' | 'Wildlife & Safari' | 'Iconic Scenic';
+  region: string;
+  zoneId: 'ZONE_CT_CENTRAL' | 'ZONE_PENINSULA' | 'ZONE_WINELANDS' | 'ZONE_WEST_COAST' | 'ZONE_OVERBERG' | 'ZONE_KAROO';
+  priceZAR: number;
+  duration: string;
+  image: string;
+  description: string;
+  highlights: string[];
+  recommendedSlot: 'Morning' | 'Midday' | 'Afternoon' | 'Sunset / Evening';
+}
+
+export interface ZoneCluster {
+  id: string;
+  name: string;
+  description: string;
+  approxDistance: string;
+}
+
+export const REGIONAL_ZONES: Record<string, ZoneCluster> = {
+  ZONE_CT_CENTRAL: {
+    id: 'ZONE_CT_CENTRAL',
+    name: 'Cape Town Central & Table Bay',
+    description: 'City bowl, V&A Waterfront, Table Mountain & Signal Hill aerial views',
+    approxDistance: 'Central Hub',
+  },
+  ZONE_PENINSULA: {
+    id: 'ZONE_PENINSULA',
+    name: 'Cape Peninsula & False Bay',
+    description: "Chapman's Peak, Boulders Beach Penguins, Cape Point & Noordhoek",
+    approxDistance: '40–60 km south',
+  },
+  ZONE_WINELANDS: {
+    id: 'ZONE_WINELANDS',
+    name: 'Cape Winelands (Stellenbosch & Franschhoek)',
+    description: 'Historic Cape Dutch vineyards, premier wine tastings, strawberry estates & tram routes',
+    approxDistance: '50–75 km east',
+  },
+  ZONE_WEST_COAST: {
+    id: 'ZONE_WEST_COAST',
+    name: 'West Coast & Atlantis Dunes',
+    description: 'Pure white sand dunes, open-air beach seafood feasts & lagoon beauty',
+    approxDistance: '45–120 km north',
+  },
+  ZONE_OVERBERG: {
+    id: 'ZONE_OVERBERG',
+    name: 'Overberg & Whale Coast (Gansbaai)',
+    description: 'World capital for Great White Shark diving and rugged ocean cliffs',
+    approxDistance: '150 km southeast',
+  },
+  ZONE_KAROO: {
+    id: 'ZONE_KAROO',
+    name: 'Semi-Arid Karoo & Touws River',
+    description: 'Big 5 game reserves and untouched African wildlife wilderness',
+    approxDistance: '175 km inland',
+  },
+};
+
+export const ACTIVITIES_DATA: Activity[] = [
+  // 1. JC Le Roux
+  {
+    id: 'jc-le-roux',
+    name: 'JC Le Roux Bubbly & Nougat Tasting',
+    subtitle: 'Méthode Cap Classique in Devon Valley',
+    category: 'Wine & Culinary',
+    region: 'Stellenbosch',
+    zoneId: 'ZONE_WINELANDS',
+    priceZAR: 150,
+    duration: '2 Hours',
+    image: '/images/winelands_tasting_1791728598858.jpg',
+    description: "South Africa's premier sparkling wine house. Indulge in tailored Cap Classique pairings with handcrafted Turkish delights and artisan nougats amidst lush vineyard vistas.",
+    highlights: ['5 Signature Méthode Cap Classiques', 'Artisan Nougat Pairing', 'Cellar Terrace Views'],
+    recommendedSlot: 'Morning',
+  },
+  // 2. Strawberry Picking Polkadraai - Highest Tier (The Harvester + Unlimited Rider: R180)
+  {
+    id: 'strawberry-picking',
+    name: 'Strawberry Picking (Polkadraai Farm)',
+    subtitle: 'The Harvester bucket + Unlimited Rider full access',
+    category: 'Wine & Culinary',
+    region: 'Stellenbosch',
+    zoneId: 'ZONE_WINELANDS',
+    priceZAR: 180,
+    duration: '2 Hours',
+    image: '/images/strawberry_polkadraai_1791729868159.jpg',
+    description: 'Walk through endless rows of sun-drenched strawberry fields at Polkadraai Farm. Highest tier includes "The Harvester" large picking container plus Unlimited Rider pass for tractor rides, mini golf, pony rides, jumping castles, and pedal carts.',
+    highlights: ['The Harvester Large Container (Highest Tier)', 'Unlimited Rider Activities Pass', 'Tractor Ride & Farm Mini-Golf'],
+    recommendedSlot: 'Morning',
+  },
+  // 3. Franschhoek Wine Tram - Highest Premium Pass (R330)
+  {
+    id: 'franschhoek-tram',
+    name: 'Franschhoek Wine Tram Experience',
+    subtitle: 'Hop-on hop-off through world-class valleys',
+    category: 'Wine & Culinary',
+    region: 'Franschhoek',
+    zoneId: 'ZONE_WINELANDS',
+    priceZAR: 330,
+    duration: '5 - 6 Hours',
+    image: '/images/franschhoek_wine_tram_1791729808984.jpg',
+    description: 'An open-air vintage tram traveling through the rolling Franschhoek Valley, stopping at world-renowned wine estates for cellar tours and gourmet tastings.',
+    highlights: ['Historic Open-Sided Double-Decker Tram', 'Full Valley Route Pass', 'French Huguenot Scenery'],
+    recommendedSlot: 'Midday',
+  },
+  // 4. Die Strandloper - Highest Full Feast Tier (R495)
+  {
+    id: 'die-strandloper',
+    name: 'Die Strandloper Seafood Feast',
+    subtitle: 'Full 10-course open-air coastal crayfish & seafood feast',
+    category: 'Wine & Culinary',
+    region: 'Langebaan',
+    zoneId: 'ZONE_WEST_COAST',
+    priceZAR: 495,
+    duration: '4 Hours',
+    image: '/images/seafood_strandloper_1791728609609.jpg',
+    description: 'An unforgettable barefoot dining experience right on the Langebaan lagoon sand. Ten courses cooked on open driftwood fires including mussels, grilled angel-fish, whole fresh crayfish, and farm potbread.',
+    highlights: ['Full 10-Course Open-Fire Seafood Feast', 'Whole Fresh Crayfish Catch', 'Barefoot Beach Atmosphere'],
+    recommendedSlot: 'Midday',
+  },
+  // 5. Table Mountain Cableway - Highest Fast-Track / Peak Morning Tier (R490)
+  {
+    id: 'table-mountain-cableway',
+    name: 'Table Mountain Aerial Cableway',
+    subtitle: 'Peak morning return ride with rotating 360° summit views',
+    category: 'Iconic Scenic',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 490,
+    duration: '2.5 Hours',
+    image: '/images/table_mountain_cableway_1791729785922.jpg',
+    description: 'Glide up 1,067 meters above sea level in a 360-degree rotating cable car to the flat-topped summit of Table Mountain, enjoying breathtaking panoramic views across the Atlantic and city bowl.',
+    highlights: ['Peak Morning Summit Access', '360° Rotating Floor Cabin', 'Panoramic Mountain Plateau Walk'],
+    recommendedSlot: 'Morning',
+  },
+  // 6. Abseiling Table Mountain - Highest High-Angle Drop Tier (R1,250)
+  {
+    id: 'abseiling-table-mountain',
+    name: 'Abseiling Table Mountain (112m)',
+    subtitle: 'World’s highest commercial cliff abseil with full gear',
+    category: 'Adrenaline & Air',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 1250,
+    duration: '2 Hours',
+    image: '/images/abseiling_cliff_1791729932889.jpg',
+    description: 'Step off the edge of Table Mountain into 1,000 meters of vertical void! An adrenaline rush of a lifetime surrounded by Camps Bay and the Twelve Apostles peaks.',
+    highlights: ['Certified High-Angle Guide', '112-meter Pure Drop', 'High-Res Action Photos Available'],
+    recommendedSlot: 'Midday',
+  },
+  // 7. Paragliding Signal Hill - Highest Tier with Full In-Flight Video (R1,600)
+  {
+    id: 'paragliding-signal-hill',
+    name: 'Tandem Paragliding from Signal Hill',
+    subtitle: 'Tandem flight plus HD in-flight video & photo package',
+    category: 'Adrenaline & Air',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 1600,
+    duration: '1.5 Hours',
+    image: '/images/paragliding_signal_hill_1791729846827.jpg',
+    description: 'Launch off the slopes of Signal Hill or Lions Head alongside a licensed tandem flight master. Glide gently through coastal sea breezes and land gracefully on Sea Point Promenade.',
+    highlights: ['Full In-Flight HD Video & Photos', 'Zero Flight Experience Needed', 'Touchdown on Atlantic Promenade'],
+    recommendedSlot: 'Afternoon',
+  },
+  // 8. Helicopter Tour - Highest Two Oceans Flight (R2,950)
+  {
+    id: 'helicopter-tour',
+    name: 'Two Oceans Scenic Helicopter Flight',
+    subtitle: 'VIP bird’s-eye view of Atlantic & Indian ocean coasts',
+    category: 'Adrenaline & Air',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 2950,
+    duration: '1 Hour (25m Airborne)',
+    image: '/images/helicopter_cape_tour_1791729857455.jpg',
+    description: 'Depart from the V&A Waterfront helipad for an executive private helicopter flight charting the Atlantic Seaboard, Clifton, Camps Bay, Twelve Apostles, and Hout Bay coastline.',
+    highlights: ['VIP Helipad Boarding', 'Bose Noise-Canceling Headsets', 'Unrivaled Coastal Photography'],
+    recommendedSlot: 'Morning',
+  },
+  // 9. Sunset Luxury Catamaran Cruise - Highest Waterfront Open Deck (R480)
+  {
+    id: 'sunset-cruise',
+    name: 'Table Bay Sunset Catamaran Cruise',
+    subtitle: 'V&A Waterfront to Table Bay golden hour ocean cruise',
+    category: 'Ocean & Coastal',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 480,
+    duration: '2 Hours',
+    image: '/images/sunset_catamaran_1791729878997.jpg',
+    description: 'Sail out into the sheltered waters of Table Bay aboard a luxury double-deck catamaran as the sun sinks behind Lion’s Head.',
+    highlights: ['Panoramic Table Bay Views', 'Dolphin & Fur Seal Sightings', 'Unmatched Golden Hour Glow'],
+    recommendedSlot: 'Sunset / Evening',
+  },
+  // 10. Private Yacht Charter - Highest Group Charter (R4,800)
+  {
+    id: 'private-yacht-charter',
+    name: 'Private Luxury Yacht Charter',
+    subtitle: 'Exclusive ocean yacht cruise with skipper and crew',
+    category: 'Ocean & Coastal',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 4800,
+    duration: '3 Hours',
+    image: '/images/sunset_catamaran_1791729878997.jpg',
+    description: 'Your own private captained motor yacht departing V&A Marina. Anchor in Clifton 4th Beach for a swim, open sundeck lounging, and bespoke ocean excursion.',
+    highlights: ['Dedicated Skipper & Crew', 'Clifton 4th Private Anchorage', 'Premium Sound System'],
+    recommendedSlot: 'Afternoon',
+  },
+  // 11. Boulders Beach African Penguins - Highest Conservation Entry (R190)
+  {
+    id: 'boulders-beach',
+    name: 'Boulders Beach African Penguin Colony',
+    subtitle: 'Walk among endangered wild penguins on boardwalks',
+    category: 'Wildlife & Safari',
+    region: 'Simon\'s Town',
+    zoneId: 'ZONE_PENINSULA',
+    priceZAR: 190,
+    duration: '2 Hours',
+    image: '/images/boulders_beach_penguins_1791729773950.jpg',
+    description: 'Stroll on sheltered wooden boardwalks alongside crystal turquoise coves and giant ancient granite boulders where thousands of African penguins nest, swim, and waddle.',
+    highlights: ['Full Conservation Boardwalk Access', 'Sheltered Warm Water Swimming', 'Conservation Education Center'],
+    recommendedSlot: 'Morning',
+  },
+  // 12. Cape Point Nature Reserve - Highest International Standard (R400)
+  {
+    id: 'cape-point-reserve',
+    name: 'Cape Point & Cape of Good Hope',
+    subtitle: 'The southwesternmost tip of the African continent',
+    category: 'Iconic Scenic',
+    region: 'Cape Peninsula',
+    zoneId: 'ZONE_PENINSULA',
+    priceZAR: 400,
+    duration: '3.5 Hours',
+    image: '/images/cape_point_reserve_1791729912601.jpg',
+    description: 'Explore towering maritime cliffs, dramatic ocean swells, indigenous fynbos vegetation, wild baboons, mountain zebras, and the historic Flying Dutchman Funicular lighthouse.',
+    highlights: ['Cape of Good Hope Sign Photo', 'Historic Old Lighthouse Funicular', 'Shipwreck Walking Trails'],
+    recommendedSlot: 'Midday',
+  },
+  // 13. Ocean Safari - Highest Marine Adventure (R350)
+  {
+    id: 'ocean-safari',
+    name: 'Hout Bay & Duiker Island Marine Safari',
+    subtitle: 'Colony of 6,000 Cape Fur Seals & dolphins',
+    category: 'Ocean & Coastal',
+    region: 'Cape Peninsula',
+    zoneId: 'ZONE_PENINSULA',
+    priceZAR: 350,
+    duration: '1.5 Hours',
+    image: '/images/sunset_catamaran_1791729878997.jpg',
+    description: 'Board an eco-vessel cruising past the Sentinel mountain into Duiker Island to observe thousands of wild Cape Fur Seals diving and playing in crystal kelp forests.',
+    highlights: ['Duiker Island Seal Reef', 'Marine Biologist Commentary', 'Frequent Dolphin Encounters'],
+    recommendedSlot: 'Morning',
+  },
+  // 14. Horse Riding Noordhoek Beach - Highest Beach & Shipwreck Trek (R750)
+  {
+    id: 'horse-riding-noordhoek',
+    name: 'Noordhoek Long Beach Horse Trek',
+    subtitle: 'Gallop across 8km of pure white Atlantic sand',
+    category: 'Wildlife & Safari',
+    region: 'Cape Peninsula',
+    zoneId: 'ZONE_PENINSULA',
+    priceZAR: 750,
+    duration: '2 Hours',
+    image: '/images/horse_riding_beach_1791729923529.jpg',
+    description: 'Guided equestrian riding along the wide, tranquil expanse of Noordhoek Beach, passing the historic Kakapo shipwreck with views of Chapman’s Peak mountain.',
+    highlights: ['Gentle & Experienced Horses', 'Shipwreck Shoreline Route', 'Beginner to Advanced Riders'],
+    recommendedSlot: 'Afternoon',
+  },
+  // 15. Quad Biking Atlantis Dunes - Highest 2-Hour 4x4 Tour (R950)
+  {
+    id: 'quad-biking-atlantis',
+    name: 'Quad Biking at Atlantis Dunes',
+    subtitle: 'High-power 4x4 dune riding on white desert sands',
+    category: 'Adrenaline & Air',
+    region: 'Atlantis Dunes',
+    zoneId: 'ZONE_WEST_COAST',
+    priceZAR: 950,
+    duration: '2 Hours',
+    image: '/images/quad_biking_atlantis_1791729836912.jpg',
+    description: 'Take command of an automatic 4x4 quad bike through 27 square kilometers of rolling pure-white desert dunes. Feel the rush of scaling steep sand peaks and drifting along dune ridges.',
+    highlights: ['Automatic 350cc Quads', 'Safety Gear & Training Included', 'Dune Peak Photo Stops'],
+    recommendedSlot: 'Morning',
+  },
+  // 16. Sandboarding Atlantis Dunes - Highest Board & Speed Toboggan (R450)
+  {
+    id: 'sandboarding-atlantis',
+    name: 'Sandboarding on Pure White Dunes',
+    subtitle: 'Surf towering dunes with professional instructors',
+    category: 'Adrenaline & Air',
+    region: 'Atlantis Dunes',
+    zoneId: 'ZONE_WEST_COAST',
+    priceZAR: 450,
+    duration: '2 Hours',
+    image: '/images/quad_biking_atlantis_1791729836912.jpg',
+    description: 'Fast-paced sandboarding on smooth silica dunes. Ride standing up or sit down on a speed-waxed toboggan down 50-meter dune slopes with instructor coaching.',
+    highlights: ['All Boards & Wax Included', 'Speed Toboggan Option', 'Endless Fun for Groups'],
+    recommendedSlot: 'Afternoon',
+  },
+  // 17. Aquila Private Game Reserve Big 5 Safari - Highest Full Day Day Safari + Buffet (R2,490)
+  {
+    id: 'aquila-big5-safari',
+    name: 'Aquila Private Game Reserve Big 5 Safari',
+    subtitle: 'Full day game drive + lodge buffet feast in the Karoo',
+    category: 'Wildlife & Safari',
+    region: 'Touws River',
+    zoneId: 'ZONE_KAROO',
+    priceZAR: 2490,
+    duration: 'Full Day (4h Safari + Buffet Lunch)',
+    image: '/images/aquila_safari_1791728619653.jpg',
+    description: 'A malaria-free 10,000-hectare Karoo conservatory. Journey in open 4x4 game safari cruisers guided by ranger experts to spot the Big 5, followed by a lavish African lodge buffet feast.',
+    highlights: ['Big 5 Game Drive Experience', 'Full Buffet Lunch at Lodge', 'Malaria-Free Nature Conservatory'],
+    recommendedSlot: 'Midday',
+  },
+  // 18. Shark Cage Diving Gansbaai - Highest All-Inclusive Excursion (R2,850)
+  {
+    id: 'shark-cage-diving',
+    name: 'Great White Shark Cage Diving',
+    subtitle: 'All-inclusive boat excursion, cage dive, breakfast & lunch',
+    category: 'Adrenaline & Air',
+    region: 'Gansbaai',
+    zoneId: 'ZONE_OVERBERG',
+    priceZAR: 2850,
+    duration: 'Full Day (3h Boat)',
+    image: '/images/shark_cage_diving_1791729796051.jpg',
+    description: 'Head to Gansbaai, the Great White Shark capital of the world. Submerge safely into a heavy-gauge marine steel cage with certified marine biologists and spot wild bronze whalers and great white sharks.',
+    highlights: ['No Scuba License Required', 'Wetsuits & Snorkel Gear Provided', 'Breakfast & Light Lunch Included'],
+    recommendedSlot: 'Morning',
+  },
+  // 19. Ziplining Cape Town - Highest Full Canopy Course (R890)
+  {
+    id: 'ziplining-cape-town',
+    name: 'Canopy Ziplining Cape Town',
+    subtitle: 'Full 12-platform course across mountain forest canopy',
+    category: 'Adrenaline & Air',
+    region: 'Cape Town Central',
+    zoneId: 'ZONE_CT_CENTRAL',
+    priceZAR: 890,
+    duration: '2.5 Hours',
+    image: '/images/zipline_canopy_1791729943294.jpg',
+    description: 'One of Africa’s longest and highest zipline tours. Soar across 1.4 kilometers of steel cables above tree canopies and deep mountain gorges with panoramic ocean views.',
+    highlights: ['12 High-Speed Platforms', 'Indigenous Fynbos Canopy', 'Double-Safety Cable Rigging'],
+    recommendedSlot: 'Morning',
+  },
+  // 20. Harley Davidson Coastal Excursion - Highest Full Coastal Pass (R2,200)
+  {
+    id: 'harley-davidson-excursion',
+    name: 'Harley Davidson Chauffeured Coastal Tour',
+    subtitle: 'Cruise Chapman’s Peak on an American icon',
+    category: 'Iconic Scenic',
+    region: 'Cape Peninsula',
+    zoneId: 'ZONE_PENINSULA',
+    priceZAR: 2200,
+    duration: '3 Hours',
+    image: '/images/suzuki_king_chauffeur_1791729762164.jpg',
+    description: 'Ride as a pillion passenger behind an experienced road captain on an authentic Harley-Davidson motorcycle along the world-renowned curves of Chapman’s Peak Drive.',
+    highlights: ['Authentic Harley Davidson Fleet', 'Leather Jacket & Helmet Provided', 'Unbeatable Roar & Coastal Scenery'],
+    recommendedSlot: 'Afternoon',
+  },
+  // 21. Gyrocopter & Microlight Flight - Highest Full Coastal Flight (R1,950)
+  {
+    id: 'gyrocopter-flight',
+    name: 'Gyrocopter & Microlight Coastal Flight',
+    subtitle: 'Open-cockpit flight over pristine West Coast waters',
+    category: 'Adrenaline & Air',
+    region: 'Melkbosstrand',
+    zoneId: 'ZONE_WEST_COAST',
+    priceZAR: 1950,
+    duration: '1 Hour',
+    image: '/images/paragliding_signal_hill_1791729846827.jpg',
+    description: 'Experience pure wind-in-your-face aviation in an open-cockpit tandem Gyrocopter. Fly over pristine white beaches with clear aerial views of Robben Island and Table Mountain.',
+    highlights: ['Open Cockpit 360° Sensation', 'Whale & Dolphin Spotting From Above', 'Hands-On Dual Controls Briefing'],
+    recommendedSlot: 'Morning',
+  },
+  // 22. Crocodile Cage Diving - Highest Predator Dive (R580)
+  {
+    id: 'crocodile-cage-diving',
+    name: 'Crocodile Diving Encounter (Le Bonheur)',
+    subtitle: 'Underwater cage encounter with Nile crocodiles',
+    category: 'Adrenaline & Air',
+    region: 'Paarl',
+    zoneId: 'ZONE_WINELANDS',
+    priceZAR: 580,
+    duration: '1.5 Hours',
+    image: '/images/crocodile_diving_paarl_1791737277148.jpg',
+    description: 'Climb into an underwater cage submerged in a lagoon home to over 200 Nile crocodiles. Eye-to-eye contact with pre-historic apex predators in crystal clear safety.',
+    highlights: ['Underwater Viewing Cage', 'Experienced Reptile Handlers', 'Reptile Rehabilitation Tour'],
+    recommendedSlot: 'Afternoon',
+  },
+];
