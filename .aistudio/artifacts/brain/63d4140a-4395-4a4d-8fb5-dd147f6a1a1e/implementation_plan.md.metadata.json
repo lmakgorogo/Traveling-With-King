@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for Traveling with King - bespoke Cape Town & Western Cape tour itinerary builder featuring custom activity catalog, smart geographic day-clustering, transparent fee calculator with King's transport and VIP package, direct WhatsApp booking dispatch, and printable luxury travel voucher.",
-  "updatedAt":  "2026-10-11T14:20:40.608637691Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Implementation plan for hotel-to-destination distance calculation in km, featuring Cape Town luxury hotel presets, searchable hotel input, round-trip km computation, daily route distance badges, detailed financial breakdowns, and booking voucher integration.",
+  "updatedAt": "2026-10-17T21:01:23.618006293Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

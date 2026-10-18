@@ -3,14 +3,18 @@ import { Activity, ACTIVITIES_DATA, REGIONAL_ZONES } from '../data/activities';
 import { ActivityCard } from './ActivityCard';
 import { Search, SlidersHorizontal, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
 
+import { CurrencyCode } from '../utils/currency';
+
 interface CatalogSectionProps {
   selectedActivityIds: string[];
   onToggleActivity: (id: string) => void;
   onViewDetails: (activity: Activity) => void;
+  currency?: CurrencyCode;
 }
 
 const CATEGORIES = [
   'All Experiences',
+  'Free Birthday Treats 🎂',
   'Wine & Culinary',
   'Iconic Scenic',
   'Adrenaline & Air',
@@ -22,6 +26,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
   selectedActivityIds,
   onToggleActivity,
   onViewDetails,
+  currency = 'ZAR',
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All Experiences');
   const [activeZone, setActiveZone] = useState<string>('ALL');
@@ -30,7 +35,11 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
   const filteredActivities = useMemo(() => {
     return ACTIVITIES_DATA.filter((act) => {
       const matchesCategory =
-        activeCategory === 'All Experiences' || act.category === activeCategory;
+        activeCategory === 'All Experiences'
+          ? true
+          : activeCategory === 'Free Birthday Treats 🎂'
+          ? act.category === 'Free Birthday Treats' || act.isBirthdaySpecial === true
+          : act.category === activeCategory;
       const matchesZone = activeZone === 'ALL' || act.zoneId === activeZone;
       const query = searchQuery.toLowerCase().trim();
       const matchesQuery =
@@ -47,7 +56,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
   return (
     <section id="catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
       {/* Section Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-neutral-800">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 pb-6 border-b border-neutral-800">
         <div>
           <div className="text-xs uppercase tracking-widest text-[#DFB45E] font-medium mb-2">
             Curated Western Cape Experiences
@@ -56,7 +65,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
             Choose What You Want to Experience
           </h2>
           <p className="text-sm text-neutral-400 mt-2 max-w-xl">
-            Select any destinations or thrills from the catalog below. King’s smart scheduling engine will automatically group them into cohesive days.
+            Select any destinations, birthday treats, or thrills below. King’s smart scheduling engine will automatically group them into cohesive days with private round-trip transfers. <span className="text-neutral-500 text-xs block sm:inline sm:ml-1 font-sans">*Prices may change due to peak time season.</span>
           </p>
         </div>
 
@@ -72,6 +81,30 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
             <span className="text-neutral-400">Ready to organize into days</span>
           </div>
         </div>
+      </div>
+
+      {/* Birthday Banner Spotlight */}
+      <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#1B160C] via-[#15141D] to-[#12141F] border border-[#DFB45E]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#DFB45E]/20 border border-[#DFB45E]/50 flex items-center justify-center text-2xl shrink-0">
+            🎂
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-[#FCE9B0]">Celebrating Your Birthday in Cape Town?</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DFB45E] text-[#090A0F] uppercase">R0 Free Perks</span>
+            </div>
+            <p className="text-xs text-neutral-300 mt-0.5">
+              Enjoy complimentary entry to Table Mountain, Two Oceans Aquarium, The Cape Wheel, Robben Island, Galileo Cinema & more with valid SA ID. King provides your private 7-seater chauffeured transfers!
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveCategory('Free Birthday Treats 🎂')}
+          className="px-4 py-2 rounded-xl text-xs font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] to-[#BA8936] hover:brightness-110 transition-all shrink-0 cursor-pointer shadow-sm"
+        >
+          View Free Birthday Treats
+        </button>
       </div>
 
       {/* Filter and Search Bar */}
@@ -147,6 +180,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
               isSelected={selectedActivityIds.includes(activity.id)}
               onToggle={onToggleActivity}
               onViewDetails={onViewDetails}
+              currency={currency}
             />
           ))}
         </div>

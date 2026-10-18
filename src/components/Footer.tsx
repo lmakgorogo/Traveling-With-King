@@ -7,41 +7,12 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-8 border-b border-neutral-800/60">
           {/* Logo */}
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <svg
-              className="w-48 h-auto"
-              viewBox="0 0 280 130"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient id="footerGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#DFB45E" />
-                  <stop offset="25%" stopColor="#FCE9B0" />
-                  <stop offset="50%" stopColor="#E2BD68" />
-                  <stop offset="80%" stopColor="#D4A74E" />
-                  <stop offset="100%" stopColor="#BA8936" />
-                </linearGradient>
-              </defs>
-              <text
-                x="10"
-                y="52"
-                fontFamily="'Cormorant Garamond', Georgia, serif"
-                fontSize="48"
-                fill="url(#footerGold)"
-              >
-                Traveling
-              </text>
-              <text
-                x="10"
-                y="104"
-                fontFamily="'Cormorant Garamond', Georgia, serif"
-                fontSize="48"
-                fill="url(#footerGold)"
-              >
-                with King
-              </text>
-            </svg>
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <img
+              src="/images/traveling_with_king_logo.png"
+              alt="Traveling with King"
+              className="w-48 sm:w-56 h-auto object-contain"
+            />
             <p className="text-neutral-400 text-xs max-w-sm text-center md:text-left">
               Tailored multi-day private journeys, wine tours, and outdoor adventures across Cape Town and the Western Cape chauffeured in King's 7-seater Suzuki.
             </p>

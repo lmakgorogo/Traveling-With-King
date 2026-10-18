@@ -51,9 +51,9 @@ export const MeetKingSection: React.FC = () => {
 
               <div className="p-4 rounded-2xl bg-[#141624]/90 border border-neutral-800/80">
                 <HeartHandshake className="w-5 h-5 text-[#DFB45E] mb-2" />
-                <h4 className="text-sm font-semibold text-white mb-1">Transparent R1,500/day</h4>
+                <h4 className="text-sm font-semibold text-white mb-1">Fair Distance (per KM) Rates</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Flat day-rate covers the vehicle, fuel, driver time, and private guiding for your entire group throughout the excursion.
+                  Transport is priced strictly by route kilometers and scenic tolls, ensuring far places like the Karoo (360km) or Gansbaai (320km) are realistically fueled and covered.
                 </p>
               </div>
             </div>

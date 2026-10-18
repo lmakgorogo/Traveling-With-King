@@ -1,12 +1,14 @@
 import React from 'react';
 import { Activity } from '../data/activities';
 import { X, MapPin, Clock, Check, Plus, Sparkles, Shield, Compass } from 'lucide-react';
+import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
 interface ActivityDetailsModalProps {
   activity: Activity | null;
   onClose: () => void;
   isSelected: boolean;
   onToggle: (id: string) => void;
+  currency?: CurrencyCode;
 }
 
 export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
@@ -14,8 +16,14 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
   onClose,
   isSelected,
   onToggle,
+  currency = 'ZAR',
 }) => {
   if (!activity) return null;
+
+  const isFrom = Boolean(activity.priceNote?.startsWith('From'));
+  const minVal = activity.priceMin ?? activity.priceZAR;
+  const maxVal = activity.priceMax ?? activity.priceZAR;
+  const priceDisplay = formatCurrencyRange(minVal, maxVal, currency, isFrom);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto no-print">
@@ -58,25 +66,25 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
             <h3 className="text-2xl sm:text-3xl font-serif-luxury text-white mt-1">
               {activity.name}
             </h3>
-            <p className="text-xs text-neutral-400 italic mt-0.5">
+            <p className="text-xs text-neutral-400 font-light italic mt-0.5">
               {activity.subtitle}
             </p>
           </div>
 
-          <p className="text-sm text-neutral-300 leading-relaxed font-light">
+          <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-light">
             {activity.description}
           </p>
 
           {/* Highlights */}
           <div>
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#DFB45E]" />
+            <h4 className="text-xs uppercase tracking-wider text-[#DFB45E] font-mono mb-2 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Experience Highlights</span>
             </h4>
             <div className="space-y-1.5">
               {activity.highlights.map((h, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-neutral-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#DFB45E]" />
+                <div key={i} className="flex items-start gap-2 text-xs text-neutral-300">
+                  <span className="text-[#DFB45E] mt-0.5">›</span>
                   <span>{h}</span>
                 </div>
               ))}
@@ -86,11 +94,24 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
           {/* Price & Action Row */}
           <div className="pt-4 border-t border-neutral-800 flex items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">Estimated Price</span>
-              <span className="text-2xl font-serif-luxury font-bold text-white font-mono">
-                R{activity.priceZAR.toLocaleString()}{' '}
-                <span className="text-xs font-sans text-neutral-400 font-normal">/ person</span>
+              <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">
+                {activity.priceMax === 0 ? 'Birthday Special' : 'Estimated Price'}
               </span>
+              <span className="text-xl sm:text-2xl font-serif-luxury font-bold text-white font-mono">
+                {activity.priceMax === 0 ? 'FREE' : priceDisplay}
+                {activity.priceMax !== 0 && <span className="text-xs font-sans text-neutral-400 font-normal"> / person</span>}
+              </span>
+              {activity.birthdayNote && (
+                <span className="text-xs text-[#FCE9B0] block mt-0.5 font-medium flex items-center gap-1">
+                  🎂 {activity.birthdayNote}
+                </span>
+              )}
+              {activity.priceNote && !activity.birthdayNote && (
+                <span className="text-xs text-[#DFB45E] block mt-0.5 font-medium">
+                  {activity.priceNote}
+                </span>
+              )}
+              <span className="text-[10px] text-neutral-500 block mt-0.5">* Non-standard rates: Prices may change due to peak time season</span>
             </div>
 
             <button

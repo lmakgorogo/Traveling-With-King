@@ -1,12 +1,14 @@
 import React from 'react';
 import { Activity } from '../data/activities';
 import { Check, Plus, Clock, MapPin, Sparkles, ChevronRight } from 'lucide-react';
+import { CurrencyCode, formatCurrencyRange, formatCurrency } from '../utils/currency';
 
 interface ActivityCardProps {
   activity: Activity;
   isSelected: boolean;
   onToggle: (activityId: string) => void;
   onViewDetails: (activity: Activity) => void;
+  currency?: CurrencyCode;
 }
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
@@ -14,7 +16,17 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   isSelected,
   onToggle,
   onViewDetails,
+  currency = 'ZAR',
 }) => {
+  const isFrom = Boolean(activity.priceNote?.startsWith('From'));
+  const minVal = activity.priceMin ?? activity.priceZAR;
+  const maxVal = activity.priceMax ?? activity.priceZAR;
+
+  const isBirthdayFree = activity.priceMax === 0;
+  const priceDisplay = isBirthdayFree
+    ? 'FREE'
+    : formatCurrencyRange(minVal, maxVal, currency, isFrom);
+
   return (
     <article
       className={`group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 border ${
@@ -28,43 +40,50 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         <img
           src={activity.image}
           alt={activity.name}
-          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 filter brightness-[0.9]"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            // Elegant fallback if image fails
-            (e.target as HTMLElement).style.display = 'none';
-          }}
+          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-95 group-hover:brightness-105"
+          loading="lazy"
         />
-        {/* Scrim Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F17] via-transparent to-black/30" />
 
-        {/* Region & Timing Info (Clean unboxed text over image) */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white/90 drop-shadow-md">
-          <span className="flex items-center gap-1 font-medium">
-            <MapPin className="w-3.5 h-3.5 text-[#DFB45E]" />
-            {activity.region}
-          </span>
-          <span className="flex items-center gap-1 text-neutral-300">
-            <Clock className="w-3.5 h-3.5 text-[#DFB45E]" />
-            {activity.duration}
+        {/* Top Badges */}
+        <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#090A0F]/85 backdrop-blur-md text-[#DFB45E] border border-[#DFB45E]/30 shadow-sm">
+              {activity.category}
+            </span>
+            {activity.isBirthdaySpecial && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#DFB45E] text-[#090A0F] shadow-sm flex items-center gap-1">
+                🎂 Birthday Treat
+              </span>
+            )}
+          </div>
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono text-neutral-300 bg-black/75 backdrop-blur-md border border-neutral-700/60 shadow-sm shrink-0">
+            <Clock className="w-3 h-3 text-[#DFB45E]" />
+            <span>{activity.duration}</span>
           </span>
         </div>
 
-        {/* Selected Badge Indicator */}
+        {/* Selected Indicator */}
         {isSelected && (
-          <div className="absolute top-3 right-3 bg-[#DFB45E] text-[#090A0F] text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
+          <div className="absolute bottom-3 right-3 bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
             <Check className="w-3.5 h-3.5 stroke-[3]" />
-            <span>Selected</span>
+            <span>Added to Trip</span>
           </div>
         )}
       </div>
 
-      {/* Content Body */}
-      <div className="flex-1 p-5 flex flex-col justify-between">
+      {/* Content Container */}
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
-          {/* Category kicker */}
-          <div className="text-[11px] uppercase tracking-wider text-[#DFB45E]/80 font-medium mb-1">
-            {activity.category}
+          {/* Region and Slot */}
+          <div className="flex items-center justify-between text-xs text-neutral-400 mb-1.5">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-[#DFB45E]" />
+              <span className="truncate max-w-[140px]">{activity.region}</span>
+            </span>
+            <span className="text-[11px] font-mono text-neutral-400">
+              {activity.recommendedSlot}
+            </span>
           </div>
 
           <h3 className="text-lg font-serif-luxury font-medium text-white group-hover:text-[#FCE9B0] transition-colors leading-snug mb-1">
@@ -83,11 +102,18 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         {/* Price & Action Row */}
         <div className="pt-3 border-t border-neutral-800/80 flex items-center justify-between gap-3 mt-auto">
           <div>
-            <div className="text-[10px] text-neutral-400 uppercase tracking-wider">Estimated Entry</div>
-            <div className="text-base font-semibold font-mono tabular-nums text-white">
-              R{activity.priceZAR.toLocaleString()}{' '}
-              <span className="text-[11px] font-sans font-normal text-neutral-400">/ person</span>
+            <div className="text-[10px] text-neutral-400 uppercase tracking-wider">
+              {isBirthdayFree ? 'Birthday Rate' : 'Estimated Entry'}
             </div>
+            <div className={`text-sm sm:text-base font-semibold font-mono tabular-nums ${isBirthdayFree ? 'text-[#FCE9B0]' : 'text-white'}`}>
+              {priceDisplay}
+              {!isBirthdayFree && <span className="text-[11px] font-sans font-normal text-neutral-400"> / person</span>}
+            </div>
+            {activity.priceNote && (
+              <div className="text-[10px] text-[#DFB45E]/80 truncate max-w-[150px] sm:max-w-[190px]" title={activity.priceNote}>
+                {activity.priceNote}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

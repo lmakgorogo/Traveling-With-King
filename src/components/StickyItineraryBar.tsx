@@ -1,17 +1,20 @@
 import React from 'react';
 import { Calendar, ChevronRight, Sparkles } from 'lucide-react';
 import { PricingSummary } from '../utils/itineraryEngine';
+import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
 interface StickyItineraryBarProps {
   selectedCount: number;
   pricing: PricingSummary;
   onOpenItinerary: () => void;
+  currency?: CurrencyCode;
 }
 
 export const StickyItineraryBar: React.FC<StickyItineraryBarProps> = ({
   selectedCount,
   pricing,
   onOpenItinerary,
+  currency = 'ZAR',
 }) => {
   if (selectedCount === 0) return null;
 
@@ -30,7 +33,13 @@ export const StickyItineraryBar: React.FC<StickyItineraryBarProps> = ({
                 <span className="text-[#DFB45E] hidden sm:inline">({pricing.totalDays} {pricing.totalDays === 1 ? 'Day' : 'Days'})</span>
               </div>
               <div className="text-[11px] text-neutral-400 font-mono">
-                Est. Total: <span className="text-[#FCE9B0] font-semibold">R{pricing.grandTotal.toLocaleString()} ZAR</span>
+                Est. Total: <span className="text-[#FCE9B0] font-semibold">
+                  {formatCurrencyRange(pricing.grandTotalMin, pricing.grandTotalMax, currency, false, false)}
+                </span>
+                {!pricing.isTransportCalculated && (
+                  <span className="text-[10px] text-amber-400 font-sans block sm:inline sm:ml-1.5">+ Transport pending departure</span>
+                )}
+                <span className="text-[10px] text-neutral-400 font-sans block sm:inline sm:ml-2">· Seasonality applies</span>
               </div>
             </div>
           </div>

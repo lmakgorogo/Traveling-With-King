@@ -75,7 +75,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreCatalog, onOpenItinerary, s
               <Car className="w-4 h-4 text-[#DFB45E] shrink-0" />
               <div>
                 <p className="font-semibold text-white">7-Seater Suzuki</p>
-                <p className="text-[11px] text-neutral-400">R1,500/day dedicated driver</p>
+                <p className="text-[11px] text-neutral-400">Distance-based rate per km</p>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
