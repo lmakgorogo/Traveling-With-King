@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ItineraryDay, PricingSummary } from '../utils/itineraryEngine';
-import { X, Printer, ShieldCheck, MapPin, Calendar, Users, Car, Check, Info, Download, Loader2 } from 'lucide-react';
+import { getActivityPricesForVisitor } from '../data/activities';
+import { X, Printer, ShieldCheck, Info, Download, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -94,6 +95,9 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
     }
   };
 
+  const visitorLabel =
+    pricing.visitorType === 'SA_RESIDENT' ? 'SA Resident (SA ID)' : 'International Tourist';
+
   return (
     <div className="voucher-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
       {/* Top Floating Action Bar (Hidden when printing) */}
@@ -147,7 +151,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
               className="w-48 sm:w-60 h-auto object-contain"
             />
             <p className="text-xs text-[#E2BD68] tracking-widest uppercase mt-2">
-              Official Executive Tour Voucher & Itinerary
+              Official Executive Tour Voucher &amp; Itinerary
             </p>
           </div>
 
@@ -165,7 +169,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             )}
 
             <div className="text-xs text-neutral-400">
-              Designated Guide: <span className="text-[#FCE9B0] font-medium">King (082 400 7223)</span>
+              Designated Guide: <span className="text-[#FCE9B0] font-medium">King (060 648 7486)</span>
             </div>
             <div className="text-xs text-neutral-400">
               Vehicle: <span className="text-white font-medium">7-Seater Suzuki</span>
@@ -175,7 +179,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             </div>
             {pricing.isTransportCalculated && (
               <div className="text-xs text-neutral-400">
-                Total Route Distance: <span className="text-[#DFB45E] font-mono font-semibold">{pricing.totalDistanceKm} km Round Trip</span>
+                Total Route Distance: <span className="text-[#DFB45E] font-mono font-semibold">{pricing.totalDistanceKm} km Round Trip (King pays tolls)</span>
               </div>
             )}
           </div>
@@ -188,8 +192,8 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             <span className="font-semibold text-white text-sm font-mono">{pricing.totalDays} {pricing.totalDays === 1 ? 'Day' : 'Days'}</span>
           </div>
           <div>
-            <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">Guests</span>
-            <span className="font-semibold text-white text-sm font-mono">{pricing.guestsCount} Travelers</span>
+            <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">Guests &amp; Tier</span>
+            <span className="font-semibold text-white text-sm font-mono">{pricing.guestsCount} ({pricing.visitorType === 'SA_RESIDENT' ? 'SA ID' : 'Intl'})</span>
           </div>
           <div>
             <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">Route Distance</span>
@@ -208,7 +212,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
         {/* Itinerary Schedule */}
         <div className="py-6 space-y-6">
           <h4 className="text-xs font-mono uppercase tracking-widest text-[#DFB45E]">
-            Daily Optimized Route & Timetable
+            Daily Optimized Route &amp; Timetable
           </h4>
 
           {itinerary.map((day) => (
@@ -219,7 +223,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
                 </h5>
                 <span className="text-[11px] text-[#DFB45E] font-mono font-semibold">
                   {day.transportCalculated
-                    ? `${day.roundTripKm} km round trip · ${formatCurrency(day.transportCost, currency)}`
+                    ? `${day.roundTripKm} km round trip · ${formatCurrency(day.transportCost, currency)} (King pays tolls)`
                     : day.zone.approxDistance}
                 </span>
               </div>
@@ -232,27 +236,30 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
                 King’s Dispatch: {day.kingNotes}
               </p>
               <div className="space-y-1.5 pt-1">
-                {day.activities.map((act) => (
-                  <div
-                    key={act.id}
-                    className="flex items-center justify-between text-xs py-1 px-2.5 rounded bg-neutral-900/60 border border-neutral-800/80"
-                  >
-                    <span className="font-medium text-neutral-200">
-                      • {act.name} <span className="text-neutral-400 text-[11px]">({act.recommendedSlot} · {act.duration})</span>
-                    </span>
-                    <span className="font-mono text-neutral-300">
-                      {act.priceMax === 0 ? (
-                        <span className="text-[#FCE9B0] font-semibold">FREE (Birthday Special)</span>
-                      ) : act.priceNote?.startsWith('From') ? (
-                        <>From R{act.priceMin.toLocaleString()} pp</>
-                      ) : act.priceMin && act.priceMax && act.priceMin !== act.priceMax ? (
-                        <>R{act.priceMin.toLocaleString()} – R{act.priceMax.toLocaleString()} pp</>
-                      ) : (
-                        <>R{(act.priceMin || act.priceZAR).toLocaleString()} pp</>
-                      )}
-                    </span>
-                  </div>
-                ))}
+                {day.activities.map((act) => {
+                  const resolved = getActivityPricesForVisitor(act, pricing.visitorType);
+                  return (
+                    <div
+                      key={act.id}
+                      className="flex items-center justify-between text-xs py-1 px-2.5 rounded bg-neutral-900/60 border border-neutral-800/80"
+                    >
+                      <span className="font-medium text-neutral-200">
+                        • {act.name} <span className="text-neutral-400 text-[11px]">({act.recommendedSlot} · {act.duration})</span>
+                      </span>
+                      <span className="font-mono text-neutral-300">
+                        {resolved.priceMax === 0 ? (
+                          <span className="text-[#FCE9B0] font-semibold">FREE (SA ID Birthday)</span>
+                        ) : act.priceNote?.startsWith('From') ? (
+                          <>From R{resolved.priceMin.toLocaleString()} pp</>
+                        ) : resolved.priceMin !== resolved.priceMax ? (
+                          <>R{resolved.priceMin.toLocaleString()} – R{resolved.priceMax.toLocaleString()} pp</>
+                        ) : (
+                          <>R{resolved.priceZAR.toLocaleString()} pp</>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -264,7 +271,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             Statement of Costs
           </h4>
           <div className="flex justify-between text-neutral-300">
-            <span>Activity Entrance & Tasting Fees ({pricing.guestsCount} Guests)</span>
+            <span>Activity Entrance &amp; Conservation Fees ({pricing.guestsCount} Guests · {visitorLabel})</span>
             <span className="font-mono">
               {pricing.activitiesTotalMin !== pricing.activitiesTotalMax ? (
                 <>R{pricing.activitiesTotalMin.toLocaleString()} – R{pricing.activitiesTotalMax.toLocaleString()}</>
@@ -275,9 +282,9 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
           </div>
           <div className="flex justify-between text-neutral-300">
             <span>
-              King’s Dedicated Private Transport (
+              King’s Dedicated Private Transport at R11/km (
               {pricing.isTransportCalculated
-                ? `${pricing.totalDistanceKm} km round trip across ${pricing.totalDays} ${pricing.totalDays === 1 ? 'Day' : 'Days'}`
+                ? `${pricing.totalDistanceKm} km round trip across ${pricing.totalDays} ${pricing.totalDays === 1 ? 'Day' : 'Days'} · King pays tolls`
                 : `${pricing.totalDays} ${pricing.totalDays === 1 ? 'Day' : 'Days'}`}
               )
             </span>
@@ -288,7 +295,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             </span>
           </div>
           <div className="flex justify-between text-neutral-300">
-            <span>Concierge Fee (10%)</span>
+            <span>Concierge Fee</span>
             <span className="font-mono">
               {formatCurrencyRange(pricing.curationFeeTotalMin, pricing.curationFeeTotalMax, currency)}
             </span>
@@ -299,9 +306,11 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
               {formatCurrencyRange(pricing.grandTotalMin, pricing.grandTotalMax, currency, false, false)}
             </span>
           </div>
-          <div className="pt-2 text-[10px] text-neutral-400 flex items-center gap-1.5 italic">
-            <Info className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
-            <span>* Notice: Prices are non-standard and vary between off-peak and peak holiday season supplier rates.</span>
+          <div className="pt-2 text-[10px] text-neutral-400 space-y-1 italic">
+            <div className="flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
+              <span>* Tolls &amp; Food Policy: King pays all road tolls along your route. Food/meals are excluded and for the guest's own account.</span>
+            </div>
           </div>
         </div>
 
@@ -310,10 +319,10 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
         <div className="pt-6 border-t border-[#DFB45E]/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-400">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#DFB45E]" />
-            <span>Authorized by Traveling with King Private Transfers & Tours</span>
+            <span>Authorized by Traveling with King Private Transfers &amp; Tours</span>
           </div>
           <div className="text-right">
-            <span>WhatsApp / Chauffeur Line: <strong className="text-white">082 400 7223</strong></span>
+            <span>WhatsApp / Chauffeur Line: <strong className="text-white">060 648 7486</strong></span>
           </div>
         </div>
       </div>

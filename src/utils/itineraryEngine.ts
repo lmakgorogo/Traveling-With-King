@@ -1,5 +1,11 @@
-import { Activity, REGIONAL_ZONES, ZoneCluster } from '../data/activities';
-import { findHotelById, CAPE_TOWN_HOTELS, HotelPreset } from '../data/hotels';
+import {
+  Activity,
+  REGIONAL_ZONES,
+  ZoneCluster,
+  VisitorType,
+  getActivityPricesForVisitor,
+} from '../data/activities';
+import { findHotelById } from '../data/hotels';
 
 export interface DepartureLocation {
   id: string;
@@ -133,7 +139,7 @@ export const DEPARTURE_LOCATIONS: Record<string, DepartureLocation> = {
   },
 };
 
-export const PER_KM_RATE = 11; // ZAR per km for King's private executive chauffeured transport
+export const PER_KM_RATE = 11; // ZAR per km for King's private executive chauffeured transport (King pays the road tolls)
 
 export interface ItineraryDay {
   dayNumber: number;
@@ -165,6 +171,8 @@ export interface DayTransportBreakdown {
 
 export interface PricingSummary {
   guestsCount: number;
+  visitorType: VisitorType;
+  differentialActivitiesCount: number;
   totalDays: number;
   totalDistanceKm: number;
   departureLocationId: string;
@@ -174,11 +182,16 @@ export interface PricingSummary {
   activitiesTotal: number;
   activitiesTotalMin: number;
   activitiesTotalMax: number;
+  saActivitiesTotalMin: number;
+  saActivitiesTotalMax: number;
+  intlActivitiesTotalMin: number;
+  intlActivitiesTotalMax: number;
   baseCharterRate: number;
   ratePerKm: number;
   transportTotal: number;
   daysTransportBreakdown: DayTransportBreakdown[];
   curationFeeRate: number;
+  curationFeeLabel: string;
   curationFeeTotal: number;
   curationFeeTotalMin: number;
   curationFeeTotalMax: number;
@@ -366,6 +379,7 @@ export function resolveDepartureOrHotel(
 
 /**
  * Calculates transport per km from the hotel or Airbnb where the client is fetched to destinations and back.
+ * Road tolls along the route are paid by King.
  */
 export function calculateDayDistanceAndTransport(
   zoneId: string,
@@ -402,28 +416,24 @@ export function calculateDayDistanceAndTransport(
 
   let oneWayKm = 20;
   let intraZoneKm = 10;
-  let tollFees = 0;
   let destinationName = 'Cape Town Scenic Highlights';
 
   switch (zoneId) {
     case 'ZONE_CT_CENTRAL':
       oneWayKm = resolved.distances.ZONE_CT_CENTRAL;
       intraZoneKm = 8;
-      tollFees = 0;
       destinationName = 'Cape Town Central & Table Mountain';
       break;
 
     case 'ZONE_PENINSULA':
       oneWayKm = resolved.distances.ZONE_PENINSULA;
       intraZoneKm = 15;
-      tollFees = 60;
       destinationName = 'Cape Peninsula, Boulders Beach & Cape Point';
       break;
 
     case 'ZONE_WINELANDS':
       oneWayKm = resolved.distances.ZONE_WINELANDS;
       intraZoneKm = 20;
-      tollFees = 0;
       destinationName = 'Cape Winelands (Stellenbosch & Franschhoek)';
       break;
 
@@ -432,12 +442,10 @@ export function calculateDayDistanceAndTransport(
       if (hasLangebaan) {
         oneWayKm = resolved.distances.ZONE_WEST_COAST_LANGEBAAN;
         intraZoneKm = 6;
-        tollFees = 0;
         destinationName = 'West Coast & Langebaan Lagoon';
       } else {
         oneWayKm = resolved.distances.ZONE_WEST_COAST_ATLANTIS;
         intraZoneKm = 14;
-        tollFees = 0;
         destinationName = 'West Coast & Atlantis Dunes';
       }
       break;
@@ -448,12 +456,10 @@ export function calculateDayDistanceAndTransport(
       if (hasGansbaai) {
         oneWayKm = resolved.distances.ZONE_OVERBERG_GANSBAAI;
         intraZoneKm = 5;
-        tollFees = 0;
         destinationName = 'Gansbaai Marine Sanctuary';
       } else {
         oneWayKm = resolved.distances.ZONE_OVERBERG_ELGIN;
         intraZoneKm = 10;
-        tollFees = 0;
         destinationName = 'Elgin Valley Apple Orchards';
       }
       break;
@@ -462,20 +468,19 @@ export function calculateDayDistanceAndTransport(
     case 'ZONE_KAROO':
       oneWayKm = resolved.distances.ZONE_KAROO;
       intraZoneKm = 5;
-      tollFees = 50;
       destinationName = 'Aquila Private Game Reserve (Karoo)';
       break;
 
     default:
       oneWayKm = 25;
       intraZoneKm = 10;
-      tollFees = 0;
       destinationName = 'Western Cape Scenic Route';
   }
 
+  // Transport is calculated at R11/km; King pays the road tolls along the route
   const roundTripKm = Math.round(oneWayKm * 2 + intraZoneKm);
-  const transportCost = Math.round((roundTripKm * perKmRate + tollFees) / 10) * 10;
-  const kmExplanation = `${roundTripKm} km round trip from ${hotelName}`;
+  const transportCost = Math.round((roundTripKm * perKmRate) / 10) * 10;
+  const kmExplanation = `${roundTripKm} km round trip from ${hotelName} (King pays tolls)`;
 
   const activityNames = activities.map((a) => a.name);
   const routePath = activityNames.length > 0
@@ -503,7 +508,8 @@ export function buildOptimizedItinerary(
   selectedActivities: Activity[],
   departureId: string = 'CT_CBD',
   customHotelAddress: string = '',
-  customCoordinates?: { lat: number; lng: number } | null
+  customCoordinates?: { lat: number; lng: number } | null,
+  visitorType: VisitorType = 'INTERNATIONAL'
 ): ItineraryDay[] {
   if (selectedActivities.length === 0) return [];
 
@@ -556,9 +562,9 @@ export function buildOptimizedItinerary(
         title: `Day ${currentDayNum - 1}: ${zoneInfo.name} (Part 1)`,
         zone: zoneInfo,
         activities: chunk1,
-        dayCost: chunk1.reduce((sum, item) => sum + item.priceZAR, 0),
-        dayCostMin: chunk1.reduce((sum, item) => sum + (item.priceMin ?? item.priceZAR), 0),
-        dayCostMax: chunk1.reduce((sum, item) => sum + (item.priceMax ?? item.priceZAR), 0),
+        dayCost: chunk1.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceZAR, 0),
+        dayCostMin: chunk1.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMin, 0),
+        dayCostMax: chunk1.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMax, 0),
         pace: 'Balanced',
         kingNotes: getKingNotes(zoneKey, chunk1.length),
         oneWayKm: trans1.oneWayKm,
@@ -576,9 +582,9 @@ export function buildOptimizedItinerary(
         title: `Day ${currentDayNum - 1}: ${zoneInfo.name} (Part 2)`,
         zone: zoneInfo,
         activities: chunk2,
-        dayCost: chunk2.reduce((sum, item) => sum + item.priceZAR, 0),
-        dayCostMin: chunk2.reduce((sum, item) => sum + (item.priceMin ?? item.priceZAR), 0),
-        dayCostMax: chunk2.reduce((sum, item) => sum + (item.priceMax ?? item.priceZAR), 0),
+        dayCost: chunk2.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceZAR, 0),
+        dayCostMin: chunk2.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMin, 0),
+        dayCostMax: chunk2.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMax, 0),
         pace: chunk2.length > 2 ? 'Balanced' : 'Relaxed',
         kingNotes: getKingNotes(zoneKey, chunk2.length),
         oneWayKm: trans2.oneWayKm,
@@ -596,9 +602,9 @@ export function buildOptimizedItinerary(
         title: `Day ${currentDayNum - 1}: ${zoneInfo.name}`,
         zone: zoneInfo,
         activities: activitiesInZone,
-        dayCost: activitiesInZone.reduce((sum, item) => sum + item.priceZAR, 0),
-        dayCostMin: activitiesInZone.reduce((sum, item) => sum + (item.priceMin ?? item.priceZAR), 0),
-        dayCostMax: activitiesInZone.reduce((sum, item) => sum + (item.priceMax ?? item.priceZAR), 0),
+        dayCost: activitiesInZone.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceZAR, 0),
+        dayCostMin: activitiesInZone.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMin, 0),
+        dayCostMax: activitiesInZone.reduce((sum, item) => sum + getActivityPricesForVisitor(item, visitorType).priceMax, 0),
         pace: activitiesInZone.length === 1 ? 'Relaxed' : activitiesInZone.length === 2 ? 'Balanced' : 'Full Day Adventure',
         kingNotes: getKingNotes(zoneKey, activitiesInZone.length),
         oneWayKm: trans.oneWayKm,
@@ -618,24 +624,50 @@ export function buildOptimizedItinerary(
 function getKingNotes(zoneKey: string, _count: number): string {
   switch (zoneKey) {
     case 'ZONE_WINELANDS':
-      return 'King recommends an 08:30 departure from your hotel to beat the N1 traffic and savor unhurried tastings across Stellenbosch & Franschhoek valleys.';
+      return 'King recommends an 08:30 departure from your hotel to beat the N1 traffic and enjoy unhurried vineyard visits across Stellenbosch & Franschhoek. King covers any road tolls; food & meals are for the guest’s own account.';
     case 'ZONE_WEST_COAST':
-      return 'Bring sunscreen, sunglasses, and a windbreaker. King will have fresh bottled water in the vehicle for the Atlantis sands and coastal breeze.';
+      return 'Bring sunscreen, sunglasses, and a windbreaker. King will have bottled water in the vehicle for the Atlantis sands and coastal drive. (Food & meals are for the guest’s own account.)';
     case 'ZONE_PENINSULA':
-      return "Spectacular coastal drive along Chapman's Peak. King will time the penguin visit at Boulders Beach before midday crowds arrive.";
+      return "Spectacular coastal drive along Chapman's Peak Drive — King pays the Chapman's Peak road toll and times the penguin visit at Boulders Beach before midday crowds arrive. (Food & meals are for the guest's own account.)";
     case 'ZONE_CT_CENTRAL':
       return 'King monitors Table Mountain wind and cableway queues in real-time, coordinating departure to match the clearest sky conditions.';
     case 'ZONE_KAROO':
-      return 'Early 06:15 executive pickup for the scenic Du Toitskloof pass into the Karoo (scenic return trip). Breakfast stop en route arranged by King.';
+      return 'Early 06:15 executive pickup for the scenic route into the Karoo. King pays the Huguenot Tunnel road tolls on your behalf (food & meals outside safari inclusions are for the guest’s own account).';
     case 'ZONE_OVERBERG':
-      return 'Scenic coastal route past Gordon’s Bay and Hermanus cliff paths. King handles all road tolls and marine transfer check-ins.';
+      return 'Scenic coastal route past Gordon’s Bay and Hermanus cliff paths. King covers road tolls along the route; food & meals are for the guest’s own account.';
     default:
-      return 'King handles all private transport, parking arrangements, and timing coordination so you can simply relax and take in the views.';
+      return 'King handles private chauffeured transport, route timing coordination, and pays all road tolls along the route. (Food & meals are for the guest’s own account.)';
   }
 }
 
+export const CONCIERGE_THRESHOLD = 10000;
+
 /**
- * Calculates financial breakdown with transport calculated per km from hotel/Airbnb where fetched to destination and back
+ * Computes Concierge Fee:
+ * - For subtotals > R10,000: calculated at 8%
+ * - For subtotals <= R10,000: calculated at 10% (max R1,000)
+ */
+export function calculateConciergeFee(subtotal: number): {
+  fee: number;
+  rate: number;
+} {
+  if (subtotal > CONCIERGE_THRESHOLD) {
+    return {
+      fee: Math.round(subtotal * 0.08),
+      rate: 0.08,
+    };
+  }
+  return {
+    fee: Math.min(1000, Math.round(subtotal * 0.10)),
+    rate: 0.10,
+  };
+}
+
+/**
+ * Calculates financial breakdown with:
+ * - SA Resident vs International Tourist tiered activity pricing
+ * - Transport calculated at R11/km round-trip (King pays road tolls)
+ * - Concierge Fee: 10% up to R10,000, and 8% for totals over R10,000
  */
 export function calculatePricing(
   activities: Activity[],
@@ -644,7 +676,8 @@ export function calculatePricing(
   isVip: boolean = false,
   departureId: string = '',
   customHotelAddress: string = '',
-  customCoordinates?: { lat: number; lng: number } | null
+  customCoordinates?: { lat: number; lng: number } | null,
+  visitorType: VisitorType = 'INTERNATIONAL'
 ): PricingSummary {
   const safeGuests = Math.max(1, guestsCount);
   const resolved = resolveDepartureOrHotel(departureId, customHotelAddress, customCoordinates);
@@ -652,13 +685,34 @@ export function calculatePricing(
 
   const itineraryDays = Array.isArray(daysOrCount)
     ? daysOrCount
-    : buildOptimizedItinerary(activities, departureId, customHotelAddress, customCoordinates);
+    : buildOptimizedItinerary(activities, departureId, customHotelAddress, customCoordinates, visitorType);
 
   const totalDays = Math.max(1, itineraryDays.length);
 
-  const activitiesTotalMin = activities.reduce((sum, act) => sum + (act.priceMin ?? act.priceZAR) * safeGuests, 0);
-  const activitiesTotalMax = activities.reduce((sum, act) => sum + (act.priceMax ?? act.priceZAR) * safeGuests, 0);
-  const activitiesTotal = activities.reduce((sum, act) => sum + act.priceZAR * safeGuests, 0);
+  let activitiesTotalMin = 0;
+  let activitiesTotalMax = 0;
+  let activitiesTotal = 0;
+  let saActivitiesTotalMin = 0;
+  let saActivitiesTotalMax = 0;
+  let intlActivitiesTotalMin = 0;
+  let intlActivitiesTotalMax = 0;
+  let differentialActivitiesCount = 0;
+
+  activities.forEach((act) => {
+    const resolvedPrices = getActivityPricesForVisitor(act, visitorType);
+    activitiesTotalMin += resolvedPrices.priceMin * safeGuests;
+    activitiesTotalMax += resolvedPrices.priceMax * safeGuests;
+    activitiesTotal += resolvedPrices.priceZAR * safeGuests;
+
+    saActivitiesTotalMin += resolvedPrices.saMin * safeGuests;
+    saActivitiesTotalMax += resolvedPrices.saMax * safeGuests;
+    intlActivitiesTotalMin += resolvedPrices.intlMin * safeGuests;
+    intlActivitiesTotalMax += resolvedPrices.intlMax * safeGuests;
+
+    if (resolvedPrices.isDifferential) {
+      differentialActivitiesCount++;
+    }
+  });
 
   const daysTransportBreakdown: DayTransportBreakdown[] = itineraryDays.map((d) => ({
     dayNumber: d.dayNumber,
@@ -676,21 +730,33 @@ export function calculatePricing(
     ? daysTransportBreakdown.reduce((sum, item) => sum + item.transportCost, 0)
     : 0;
 
-  // 10% Concierge fee
-  const curationFeeRate = 0.10;
-  const curationFeeTotal = Math.round((activitiesTotal + transportTotal) * curationFeeRate);
-  const curationFeeTotalMin = Math.round((activitiesTotalMin + transportTotal) * curationFeeRate);
-  const curationFeeTotalMax = Math.round((activitiesTotalMax + transportTotal) * curationFeeRate);
+  // Concierge Fee: 10% up to R10,000, or 8% when subtotal > R10,000
+  const subtotalAvg = activitiesTotal + transportTotal;
+  const subtotalMin = activitiesTotalMin + transportTotal;
+  const subtotalMax = activitiesTotalMax + transportTotal;
+
+  const avgConcierge = calculateConciergeFee(subtotalAvg);
+  const minConcierge = calculateConciergeFee(subtotalMin);
+  const maxConcierge = calculateConciergeFee(subtotalMax);
+
+  const curationFeeRate = subtotalMax > CONCIERGE_THRESHOLD ? 0.08 : avgConcierge.rate;
+  const curationFeeLabel = 'Private Tour Coordination';
+
+  const curationFeeTotal = avgConcierge.fee;
+  const curationFeeTotalMin = Math.min(minConcierge.fee, maxConcierge.fee);
+  const curationFeeTotalMax = Math.max(minConcierge.fee, maxConcierge.fee);
 
   const vipRatePerDay = 450;
   const vipTotal = isVip ? totalDays * vipRatePerDay : 0;
 
   const grandTotal = activitiesTotal + transportTotal + curationFeeTotal + vipTotal;
-  const grandTotalMin = activitiesTotalMin + transportTotal + curationFeeTotalMin + vipTotal;
-  const grandTotalMax = activitiesTotalMax + transportTotal + curationFeeTotalMax + vipTotal;
+  const grandTotalMin = activitiesTotalMin + transportTotal + minConcierge.fee + vipTotal;
+  const grandTotalMax = activitiesTotalMax + transportTotal + maxConcierge.fee + vipTotal;
 
   return {
     guestsCount: safeGuests,
+    visitorType,
+    differentialActivitiesCount,
     totalDays,
     totalDistanceKm,
     departureLocationId: resolved ? resolved.id : '',
@@ -700,11 +766,16 @@ export function calculatePricing(
     activitiesTotal,
     activitiesTotalMin,
     activitiesTotalMax,
+    saActivitiesTotalMin,
+    saActivitiesTotalMax,
+    intlActivitiesTotalMin,
+    intlActivitiesTotalMax,
     baseCharterRate: 0,
     ratePerKm: PER_KM_RATE,
     transportTotal,
     daysTransportBreakdown,
     curationFeeRate,
+    curationFeeLabel,
     curationFeeTotal,
     curationFeeTotalMin,
     curationFeeTotalMax,
@@ -729,6 +800,11 @@ export function formatWhatsAppMessage(
   itinerary: ItineraryDay[],
   pricing: PricingSummary
 ): string {
+  const visitorLabel =
+    pricing.visitorType === 'SA_RESIDENT'
+      ? 'South African Resident (with SA ID)'
+      : 'International Tourist';
+
   let message = `*TRAVELING WITH KING - TOUR BOOKING INQUIRY*\n`;
   message += `*STATUS: AWAITING KING'S CONFIRMATION*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
@@ -739,7 +815,7 @@ export function formatWhatsAppMessage(
   if (clientEmail) message += `• Client Email: ${clientEmail} (Confirmation email sent automatically)\n`;
   if (travelDates) message += `• Travel Dates: ${travelDates}\n`;
   message += `• Pickup Location: ${pickupLocation || pricing.fetchedHotelName || pricing.departureLocationName || 'Cape Town Hotel / Airbnb'}\n`;
-  message += `• Guests: ${pricing.guestsCount} travelers\n`;
+  message += `• Guests: ${pricing.guestsCount} travelers (${visitorLabel})\n`;
   if (pricing.isTransportCalculated) {
     message += `• Total Round-Trip Distance: ${pricing.totalDistanceKm} km across ${pricing.totalDays} touring days\n`;
   }
@@ -753,13 +829,15 @@ export function formatWhatsAppMessage(
     message += `• Region: ${day.zone.name}\n`;
     if (day.transportCalculated) {
       message += `• Route: ${day.routePath || day.kmExplanation}\n`;
-      message += `• Daily Distance: ${day.roundTripKm} km round trip (R${day.transportCost.toLocaleString()} chauffeured transfer)\n`;
+      message += `• Daily Distance: ${day.roundTripKm} km round trip (R${day.transportCost.toLocaleString()} chauffeured transfer · King pays road tolls)\n`;
     }
     message += `• Experiences:\n`;
     day.activities.forEach((act) => {
-      const priceText = act.priceMin && act.priceMax && act.priceMin !== act.priceMax
-        ? `R${act.priceMin.toLocaleString()} - R${act.priceMax.toLocaleString()}`
-        : `R${act.priceZAR.toLocaleString()}`;
+      const resolved = getActivityPricesForVisitor(act, pricing.visitorType);
+      const priceText =
+        resolved.priceMin !== resolved.priceMax
+          ? `R${resolved.priceMin.toLocaleString()} - R${resolved.priceMax.toLocaleString()}`
+          : `R${resolved.priceZAR.toLocaleString()}`;
       message += `   - ${act.name} (${act.recommendedSlot} · ${priceText} pp)\n`;
     });
     message += `\n`;
@@ -767,12 +845,12 @@ export function formatWhatsAppMessage(
 
   message += `*FINANCIAL SUMMARY*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `• Activity Entry & Tasting Fees: R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
-  message += `• Private Chauffeured Transport (${pricing.totalDays} Days): R${pricing.transportTotal.toLocaleString()} (${pricing.totalDistanceKm} km @ R${pricing.ratePerKm}/km)\n`;
-  message += `• Concierge Fee (10%): R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
+  message += `• Activity Entry & Conservation Fees (${visitorLabel}): R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
+  message += `• Private Chauffeured Transport (${pricing.totalDays} Days): R${pricing.transportTotal.toLocaleString()} (${pricing.totalDistanceKm} km @ R${pricing.ratePerKm}/km · King pays tolls)\n`;
+  message += `• Concierge Fee: R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
   message += `• *TOTAL ESTIMATED COST*: *R${pricing.grandTotalMin.toLocaleString()} - R${pricing.grandTotalMax.toLocaleString()}*\n\n`;
 
-  message += `_Prices may vary according to peak season rates, supplier demand, and holiday dates._\n\n`;
+  message += `_Note: King pays all road tolls along your route. Food/meals are not arranged by King and are for the guest's own account. Prices may vary according to peak season rates._\n\n`;
   message += `Please confirm vehicle availability for these dates. Thank you!`;
 
   return message;
@@ -798,13 +876,13 @@ export function formatConfirmationEmail(
   body: string;
 } {
   const fromEmail = 'lerato@marubcreations.co.za';
-  const fromName = 'Lerato | Marub Creations';
+  const fromName = 'Traveling with King';
   const toEmail = clientEmail ? clientEmail.trim() : '';
-  const dateStr = new Date().toLocaleDateString('en-ZA', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+
+  const visitorLabel =
+    pricing.visitorType === 'SA_RESIDENT'
+      ? 'South African Resident (with SA ID)'
+      : 'International Tourist';
 
   const subject = `Booking Confirmation (${bookingReference}) - Traveling with King [Awaiting King's Confirmation]`;
 
@@ -812,7 +890,7 @@ export function formatConfirmationEmail(
   body += `Thank you for booking your bespoke Cape Town & Western Cape private tour with Traveling with King.\n\n`;
   body += `BOOKING STATUS: AWAITING KING'S CONFIRMATION\n`;
   body += `• Reference: ${bookingReference}\n`;
-  body += `• Executive Chauffeur & Guide: King (+27 82 400 7223)\n`;
+  body += `• Direct Contact / WhatsApp: 060 648 7486\n`;
   body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   body += `RESERVATION & PICKUP DETAILS\n`;
@@ -821,7 +899,7 @@ export function formatConfirmationEmail(
   body += `• Email Address: ${toEmail || 'Provided'}\n`;
   body += `• Travel Dates: ${travelDates}\n`;
   body += `• Pickup Location (Hotel / Airbnb): ${pickupLocation || pricing.fetchedHotelName || pricing.departureLocationName}\n`;
-  body += `• Party Size: ${pricing.guestsCount} ${pricing.guestsCount === 1 ? 'Traveler' : 'Travelers'}\n`;
+  body += `• Party Size: ${pricing.guestsCount} ${pricing.guestsCount === 1 ? 'Traveler' : 'Travelers'} (${visitorLabel})\n`;
   if (pricing.isTransportCalculated) {
     body += `• Total Calculated Route Distance: ${pricing.totalDistanceKm} km round trip across ${pricing.totalDays} ${pricing.totalDays === 1 ? 'day' : 'days'}\n`;
   }
@@ -833,28 +911,31 @@ export function formatConfirmationEmail(
     body += `\n${day.title} (${day.zone.name})\n`;
     if (day.transportCalculated) {
       body += `Route: ${day.routePath || day.kmExplanation}\n`;
-      body += `Distance: ${day.roundTripKm} km round trip (R${day.transportCost.toLocaleString()})\n`;
+      body += `Distance: ${day.roundTripKm} km round trip (R${day.transportCost.toLocaleString()} · King pays road tolls)\n`;
     }
     day.activities.forEach((act) => {
-      const priceText = act.priceMin && act.priceMax && act.priceMin !== act.priceMax
-        ? `R${act.priceMin.toLocaleString()} - R${act.priceMax.toLocaleString()}`
-        : `R${act.priceZAR.toLocaleString()}`;
+      const resolved = getActivityPricesForVisitor(act, pricing.visitorType);
+      const priceText =
+        resolved.priceMin !== resolved.priceMax
+          ? `R${resolved.priceMin.toLocaleString()} - R${resolved.priceMax.toLocaleString()}`
+          : `R${resolved.priceZAR.toLocaleString()}`;
       body += `  • ${act.name} (${act.recommendedSlot} · ${act.duration} · ${priceText} pp)\n`;
     });
   });
 
   body += `\nESTIMATED COST BREAKDOWN\n`;
   body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  body += `• Activity Entrance & Tasting Fees: R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
-  body += `• Dedicated Private Transport (${pricing.totalDistanceKm} km round trip): R${pricing.transportTotal.toLocaleString()}\n`;
-  body += `• Concierge Fee (10%): R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
+  body += `• Activity Entrance & Conservation Fees (${visitorLabel}): R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
+  body += `• Dedicated Private Transport (${pricing.totalDistanceKm} km round trip @ R${pricing.ratePerKm}/km · King pays road tolls): R${pricing.transportTotal.toLocaleString()}\n`;
+  body += `• Concierge Fee: R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
   body += `• ESTIMATED COST: R${pricing.grandTotalMin.toLocaleString()} - R${pricing.grandTotalMax.toLocaleString()}\n\n`;
+  body += `IMPORTANT NOTE: King pays all road tolls along your route. Food/meals are not arranged by King and are for the guest's own account.\n\n`;
 
   body += `NEXT STEPS:\n`;
-  body += `Your booking details have been dispatched to King and are currently awaiting his final schedule confirmation. King will reach out to you directly via WhatsApp/Phone (+27 82 400 7223) or email to finalize your pickup time.\n\n`;
+  body += `Your booking details have been dispatched to King and are currently awaiting final schedule confirmation. We will reach out to you directly via WhatsApp/Phone (060 648 7486) or email to finalize your pickup time.\n\n`;
   body += `Warm regards,\n\n`;
   body += `Traveling with King Private Chauffeur & Tours\n`;
-  body += `Direct / WhatsApp with King: 082 400 7223\n`;
+  body += `Direct / WhatsApp: 060 648 7486\n`;
   body += `Cape Town, South Africa`;
 
   return { fromEmail, fromName, toEmail, subject, body };

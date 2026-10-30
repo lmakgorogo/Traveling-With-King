@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Activity } from '../data/activities';
-import { ItineraryDay, PricingSummary, resolveDepartureOrHotel } from '../utils/itineraryEngine';
+import { Activity, VisitorType, getActivityPricesForVisitor } from '../data/activities';
+import { ItineraryDay, PricingSummary } from '../utils/itineraryEngine';
 import { HotelSelector } from './HotelSelector';
 import { LatLngLiteral } from './MapsAddressInput';
 import { CalendarPicker } from './CalendarPicker';
@@ -18,9 +18,9 @@ import {
   Clock,
   ShieldCheck,
   Info,
-  MapPin,
   Building2,
   Navigation,
+  Globe,
 } from 'lucide-react';
 
 interface ItinerarySectionProps {
@@ -42,6 +42,9 @@ interface ItinerarySectionProps {
   customDepartureAddress?: string;
   onUpdateCustomDeparture?: (addr: string, coords?: LatLngLiteral | null) => void;
   customCoordinates?: LatLngLiteral | null;
+  hasCompletedBooking?: boolean;
+  visitorType?: VisitorType;
+  onSelectVisitorType?: (type: VisitorType) => void;
 }
 
 export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
@@ -62,6 +65,9 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
   customDepartureAddress = '',
   onUpdateCustomDeparture,
   customCoordinates = null,
+  hasCompletedBooking = false,
+  visitorType = 'INTERNATIONAL',
+  onSelectVisitorType,
 }) => {
   const hasItems = selectedActivities.length > 0;
   const [showCalendarInOverview, setShowCalendarInOverview] = useState(false);
@@ -94,7 +100,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
             Your Bespoke Cape Town Schedule
           </h2>
           <p className="text-xs sm:text-sm text-neutral-400 mt-2 max-w-2xl font-light">
-            Destinations are automatically sequenced into daily return routes. Enter your place of departure to calculate dedicated private chauffeured transfers per km.
+            Destinations are automatically sequenced into daily return routes. Enter your place of departure to calculate dedicated private chauffeured transfers at R11/km (King pays the road tolls).
           </p>
         </div>
 
@@ -235,7 +241,9 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-[10px] uppercase text-neutral-400 block">Activities (pp)</span>
+                        <span className="text-[10px] uppercase text-neutral-400 block">
+                          Activities ({visitorType === 'SA_RESIDENT' ? 'SA ID' : 'Intl'} pp)
+                        </span>
                         <span className="text-sm font-mono font-semibold text-white">
                           {formatCurrencyRange(day.dayCostMin, day.dayCostMax, currency)}
                         </span>
@@ -253,7 +261,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                             </span>
                             {day.transportCalculated && (
                               <span className="text-[11px] text-[#DFB45E] font-medium font-mono truncate max-w-[200px] sm:max-w-xs">
-                                · From {day.fetchedHotelName}
+                                · From {day.fetchedHotelName} (King pays tolls)
                               </span>
                             )}
                           </div>
@@ -291,9 +299,13 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                     <div className="space-y-3">
                       {day.activities.map((act) => {
                         const isFrom = Boolean(act.priceNote?.startsWith('From'));
-                        const actMin = act.priceMin ?? act.priceZAR;
-                        const actMax = act.priceMax ?? act.priceZAR;
-                        const formattedPrice = formatCurrencyRange(actMin, actMax, currency, isFrom);
+                        const resolved = getActivityPricesForVisitor(act, visitorType);
+                        const actMin = resolved.priceMin;
+                        const actMax = resolved.priceMax;
+                        const formattedPrice =
+                          actMax === 0
+                            ? 'FREE (SA ID)'
+                            : formatCurrencyRange(actMin, actMax, currency, isFrom);
 
                         return (
                           <div
@@ -318,6 +330,14 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                                     <Clock className="w-3 h-3" />
                                     <span>{act.duration}</span>
                                   </span>
+                                  {resolved.isDifferential && (
+                                    <>
+                                      <span aria-hidden="true">·</span>
+                                      <span className="text-[#FCE9B0] font-mono text-[10px]">
+                                        {visitorType === 'SA_RESIDENT' ? 'SA ID Rate' : 'Intl Tourist Rate'}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -386,9 +406,60 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                         {pricing.totalDistanceKm} km round trip
                       </span>
                       <span className="text-[10px] text-neutral-500 block">
-                        across {pricing.totalDays} {pricing.totalDays === 1 ? 'day' : 'days'}
+                        across {pricing.totalDays} {pricing.totalDays === 1 ? 'day' : 'days'} (King pays road tolls)
                       </span>
                     </div>
+                  </div>
+                )}
+
+                {/* Visitor Residency Tier Toggle (International Tourist vs SA Resident) */}
+                {onSelectVisitorType && (
+                  <div className="py-3.5 border-b border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-white font-medium">
+                        <Globe className="w-4 h-4 text-[#DFB45E]" />
+                        <span>Visitor Conservation &amp; Entry Tier</span>
+                      </div>
+                      {pricing.differentialActivitiesCount > 0 && (
+                        <span className="text-[10px] font-mono text-[#FCE9B0]">
+                          {pricing.differentialActivitiesCount} tiered {pricing.differentialActivitiesCount === 1 ? 'place' : 'places'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 bg-[#161928] p-1 rounded-xl border border-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => onSelectVisitorType('INTERNATIONAL')}
+                        className={`py-2 px-2.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                          visitorType === 'INTERNATIONAL'
+                            ? 'bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-semibold shadow-sm'
+                            : 'text-neutral-400 hover:text-white'
+                        }`}
+                      >
+                        International Tourist
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectVisitorType('SA_RESIDENT')}
+                        className={`py-2 px-2.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                          visitorType === 'SA_RESIDENT'
+                            ? 'bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-semibold shadow-sm'
+                            : 'text-neutral-400 hover:text-white'
+                        }`}
+                      >
+                        SA Resident (SA ID)
+                      </button>
+                    </div>
+                    {pricing.differentialActivitiesCount > 0 && (
+                      <div className="text-[10px] text-neutral-400 flex items-center justify-between pt-0.5 font-mono">
+                        <span>
+                          SA ID Total: {formatCurrencyRange(pricing.saActivitiesTotalMin, pricing.saActivitiesTotalMax, currency)}
+                        </span>
+                        <span className="text-[#FCE9B0]">
+                          Intl Total: {formatCurrencyRange(pricing.intlActivitiesTotalMin, pricing.intlActivitiesTotalMax, currency)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -398,7 +469,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                     <Users className="w-4 h-4 text-[#DFB45E]" />
                     <div>
                       <span className="text-xs font-medium text-white block">Travelers / Guests</span>
-                      <span className="text-[11px] text-neutral-400">Multiplies entry & tasting fees</span>
+                      <span className="text-[11px] text-neutral-400">Multiplies entry &amp; conservation fees</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 bg-[#181B2A] rounded-xl p-1 border border-neutral-800">
@@ -425,7 +496,9 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   {/* 1. Activities Entrance Fees */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-white font-medium">Activity Entrance & Tasting Fees</span>
+                      <span className="text-white font-medium">
+                        Activity &amp; Conservation Fees ({visitorType === 'SA_RESIDENT' ? 'SA ID' : 'International'})
+                      </span>
                       <span className="text-[11px] text-neutral-400 block">
                         {selectedActivities.length} activities × {pricing.guestsCount} {pricing.guestsCount === 1 ? 'guest' : 'guests'}
                       </span>
@@ -444,7 +517,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                         <span className="text-white font-medium">Dedicated Private Transport</span>
                         <span className="text-[11px] text-neutral-400 block mt-0.5">
                           {pricing.isTransportCalculated
-                            ? `${pricing.totalDistanceKm} km round trip from hotel (R${pricing.ratePerKm}/km)`
+                            ? `${pricing.totalDistanceKm} km round trip (R${pricing.ratePerKm}/km · King pays road tolls)`
                             : 'Calculated in km once your hotel is selected'}
                         </span>
                       </div>
@@ -476,7 +549,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                         {showDistanceBreakdown && (
                           <div className="mt-2 p-2.5 rounded-xl bg-[#0C0E18] border border-neutral-800 space-y-2 text-[11px]">
                             <div className="text-neutral-400 flex items-center justify-between font-mono pb-1 border-b border-neutral-800">
-                              <span>Day & Route</span>
+                              <span>Day &amp; Route</span>
                               <span>Round-Trip km</span>
                             </div>
                             {pricing.daysTransportBreakdown.map((b) => (
@@ -497,7 +570,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                             ))}
                             <div className="pt-1.5 border-t border-neutral-800 text-[10px] text-neutral-400 flex items-center gap-1.5">
                               <Car className="w-3 h-3 text-[#DFB45E] shrink-0" />
-                              <span>King's executive 7-seater Suzuki Ertiga · Dual AC, WiFi & bottled water included.</span>
+                              <span>King's 7-seater Suzuki · King pays road tolls (food/meals for guest's own account).</span>
                             </div>
                           </div>
                         )}
@@ -508,14 +581,9 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   {/* 3. Concierge Fee */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-white font-medium">Concierge Fee</span>
-                        <span className="text-[10px] text-[#DFB45E] font-mono">
-                          10%
-                        </span>
-                      </div>
+                      <span className="text-white font-medium block">Concierge Fee</span>
                       <span className="text-[11px] text-neutral-400 block">
-                        Logistics sequencing, advance tasting desk & full trip care
+                        Private route planning &amp; tour coordination
                       </span>
                     </div>
                     <div className="text-right">
@@ -533,7 +601,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                       Estimated Total Price Range
                     </span>
                     <span className="text-[11px] text-neutral-500 block">
-                      Standard to peak season rates
+                      {visitorType === 'SA_RESIDENT' ? 'SA Resident (with SA ID) rates' : 'International Tourist rates'}
                     </span>
                   </div>
                   <div className="text-left sm:text-right">
@@ -548,11 +616,11 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   </div>
                 </div>
 
-                {/* Peak Season Pricing Disclaimer */}
+                {/* Tolls, Food & Seasonality Notice */}
                 <div className="mb-6 p-3 rounded-xl bg-[#DFB45E]/10 border border-[#DFB45E]/30 flex items-start gap-2.5 text-xs text-[#FCE9B0]">
                   <Info className="w-4 h-4 text-[#DFB45E] shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed">
-                    <strong className="font-semibold text-white">Seasonality Notice:</strong> Please note that prices may change due to peak time season, holiday demand, and seasonal supplier rates.
+                    <strong className="font-semibold text-white">Included &amp; Excluded:</strong> King pays all road tolls along your route. Food and meals are not arranged by King and are for the guest's own account.
                   </p>
                 </div>
 
@@ -575,17 +643,24 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                       className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-[0.99] transition-all shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <MessageSquare className="w-4 h-4 text-[#090A0F]" />
-                      <span>Book with King via WhatsApp</span>
+                      <span>Book Now</span>
                     </button>
                   )}
 
-                  <button
-                    onClick={onOpenPrintVoucher}
-                    className="w-full py-3 px-4 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4 text-[#DFB45E]" />
-                    <span>View & Print Official Travel Pass</span>
-                  </button>
+                  {hasCompletedBooking ? (
+                    <button
+                      onClick={onOpenPrintVoucher}
+                      className="w-full py-3 px-4 rounded-xl text-xs font-medium text-[#FCE9B0] hover:text-white bg-neutral-900 border border-[#DFB45E]/40 hover:border-[#DFB45E] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-[#DFB45E]" />
+                      <span>View &amp; Print Official Travel Pass</span>
+                    </button>
+                  ) : (
+                    <div className="w-full py-2.5 px-4 rounded-xl text-[11px] text-neutral-400 bg-[#0B0D16] border border-neutral-800/80 flex items-center justify-center gap-2 text-center">
+                      <FileText className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                      <span>Official Travel Pass is unlocked after completing your booking</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-neutral-800 text-center">

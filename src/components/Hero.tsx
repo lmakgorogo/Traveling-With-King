@@ -28,18 +28,18 @@ export const Hero: React.FC<HeroProps> = ({ onExploreCatalog, onOpenItinerary, s
           <div className="flex items-center gap-2 text-xs sm:text-sm tracking-widest text-[#E2BD68] font-medium uppercase mb-4">
             <span>Western Cape & Cape Town</span>
             <span aria-hidden="true">·</span>
-            <span>Private Guided Travel</span>
+            <span>Bespoke Private Tours</span>
             <span aria-hidden="true">·</span>
             <span>Chauffeured by King</span>
           </div>
 
           {/* Luxury Display Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-serif-luxury font-normal text-white tracking-tight leading-[1.08] mb-6 text-balance">
-            Bespoke tours, crafted effortlessly. Driven by <span className="gold-gradient-text italic font-medium">King</span>.
+            Explore the Western Cape in Royal Comfort with <span className="gold-gradient-text italic font-medium">King</span>.
           </h1>
 
           <p className="text-base sm:text-lg text-neutral-300 font-light leading-relaxed mb-8 max-w-2xl">
-            Select your dream Cape Town activities, wine tastings, and coastal adventures. Our smart engine automatically groups your choices into geographically logical multi-day itineraries with King's comfortable <span className="text-[#FCE9B0] font-medium">7-seater Suzuki</span> private transport.
+            Handpick your dream Cape Town experiences—from the Franschhoek Wine Tram and Table Mountain to Atlantis Dunes and Big 5 Safaris. Our smart planner sequences your trip by region to eliminate criss-cross driving, privately chauffeured by King in a comfortable <span className="text-[#FCE9B0] font-medium">7-seater Suzuki</span>.
           </p>
 
           {/* Action CTAs */}
@@ -48,25 +48,21 @@ export const Hero: React.FC<HeroProps> = ({ onExploreCatalog, onOpenItinerary, s
               onClick={onExploreCatalog}
               className="px-6 py-3.5 rounded-full text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-95 transition-all shadow-lg gold-subtle-glow flex items-center gap-2 cursor-pointer"
             >
-              <Compass className="w-4 h-4 text-[#090A0F]" />
-              <span>Select Activities Below</span>
+              <span>Explore 22+ Experiences</span>
+              <ArrowDown className="w-4 h-4 text-[#090A0F]" />
             </button>
 
-            {selectedCount > 0 ? (
-              <button
-                onClick={onOpenItinerary}
-                className="px-6 py-3.5 rounded-full text-sm font-medium text-[#FCE9B0] bg-[#12141F] border border-[#DFB45E]/40 hover:bg-[#1A1D2B] transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>View My {selectedCount} Selected Activities</span>
-              </button>
-            ) : (
-              <a
-                href="#how-it-works"
-                className="px-6 py-3.5 rounded-full text-sm font-medium text-neutral-300 hover:text-white bg-neutral-900/60 border border-neutral-800 hover:border-neutral-700 transition-all flex items-center gap-2"
-              >
-                <span>How Geographic Clustering Works</span>
-              </a>
-            )}
+            <button
+              onClick={onOpenItinerary}
+              className="px-6 py-3.5 rounded-full text-sm font-medium text-[#FCE9B0] bg-[#12141F] border border-[#DFB45E]/40 hover:bg-[#1A1D2B] transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Compass className="w-4 h-4 text-[#DFB45E]" />
+              <span>
+                {selectedCount > 0
+                  ? `View Smart Itinerary (${selectedCount})`
+                  : 'Build Custom Itinerary'}
+              </span>
+            </button>
           </div>
 
           {/* Trust Value Strip */}
@@ -95,7 +91,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreCatalog, onOpenItinerary, s
             <div className="flex items-center gap-2.5">
               <Shield className="w-4 h-4 text-[#DFB45E] shrink-0" />
               <div>
-                <p className="font-semibold text-white">WhatsApp 082 400 7223</p>
+                <p className="font-semibold text-white">WhatsApp 060 648 7486</p>
                 <p className="text-[11px] text-neutral-400">Direct booking with King</p>
               </div>
             </div>

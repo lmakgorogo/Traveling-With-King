@@ -43,17 +43,17 @@ export const MeetKingSection: React.FC = () => {
 
               <div className="p-4 rounded-2xl bg-[#141624]/90 border border-neutral-800/80">
                 <Sparkles className="w-5 h-5 text-[#DFB45E] mb-2" />
-                <h4 className="text-sm font-semibold text-white mb-1">VIP Flexibility</h4>
+                <h4 className="text-sm font-semibold text-white mb-1">Tailored Route Pacing</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Priority stops at wine estates, reserve bookings at beach restaurants like Die Strandloper, and secluded photo lookouts.
+                  Unhurried stops at wine estates, coastal viewpoints, and secluded photo lookouts—paced around your group. (Please note: King does not arrange food/meals.)
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#141624]/90 border border-neutral-800/80">
                 <HeartHandshake className="w-5 h-5 text-[#DFB45E] mb-2" />
-                <h4 className="text-sm font-semibold text-white mb-1">Fair Distance (per KM) Rates</h4>
+                <h4 className="text-sm font-semibold text-white mb-1">R11/km Rate &amp; Tolls Included</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Transport is priced strictly by route kilometers and scenic tolls, ensuring far places like the Karoo (360km) or Gansbaai (320km) are realistically fueled and covered.
+                  Transport is priced at R11/km round-trip from your hotel or Airbnb, and King pays all road tolls along your route. (Food &amp; meals are for the guest’s own account.)
                 </p>
               </div>
             </div>
@@ -92,7 +92,7 @@ export const MeetKingSection: React.FC = () => {
                 </div>
                 <div className="flex justify-between py-1 border-b border-neutral-800/50">
                   <span className="text-neutral-400">Direct Contact:</span>
-                  <span className="text-white font-mono font-medium">082 400 7223</span>
+                  <span className="text-white font-mono font-medium">060 648 7486</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-neutral-400">Home Base:</span>
@@ -101,13 +101,13 @@ export const MeetKingSection: React.FC = () => {
               </div>
 
               <a
-                href="https://wa.me/27824007223"
+                href="https://wa.me/27606487486"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3.5 px-4 rounded-xl text-xs font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
                 <PhoneCall className="w-4 h-4 text-[#090A0F]" />
-                <span>WhatsApp King (082 400 7223)</span>
+                <span>WhatsApp (060 648 7486)</span>
               </a>
             </div>
           </div>

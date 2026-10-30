@@ -25,10 +25,10 @@ export const Footer: React.FC = () => {
             <div className="text-neutral-400">
               WhatsApp / Call:{' '}
               <a
-                href="https://wa.me/27824007223"
+                href="https://wa.me/27606487486"
                 className="text-[#FCE9B0] hover:underline font-mono"
               >
-                082 400 7223
+                060 648 7486
               </a>
             </div>
             <div className="text-[#DFB45E] font-mono text-[11px]">Private 7-Seater Suzuki Fleet & Concierge</div>
@@ -37,11 +37,11 @@ export const Footer: React.FC = () => {
 
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-neutral-500 text-[11px]">
           <p>© {new Date().getFullYear()} Traveling with King. All rights reserved.</p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-6">
             <a href="#catalog" className="hover:text-neutral-300 transition-colors">Catalog</a>
             <a href="#how-it-works" className="hover:text-neutral-300 transition-colors">Itinerary Builder</a>
             <a href="#meet-king" className="hover:text-neutral-300 transition-colors">About King</a>
-            <a href="https://wa.me/27824007223" className="hover:text-[#FCE9B0] transition-colors">WhatsApp 082 400 7223</a>
+            <a href="https://wa.me/27606487486" className="hover:text-[#FCE9B0] transition-colors">WhatsApp 060 648 7486</a>
           </div>
         </div>
       </div>

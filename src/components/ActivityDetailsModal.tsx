@@ -1,6 +1,6 @@
 import React from 'react';
-import { Activity } from '../data/activities';
-import { X, MapPin, Clock, Check, Plus, Sparkles, Shield, Compass } from 'lucide-react';
+import { Activity, VisitorType, getActivityPricesForVisitor } from '../data/activities';
+import { X, MapPin, Clock, Check, Plus, Sparkles, Globe } from 'lucide-react';
 import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
 interface ActivityDetailsModalProps {
@@ -9,6 +9,7 @@ interface ActivityDetailsModalProps {
   isSelected: boolean;
   onToggle: (id: string) => void;
   currency?: CurrencyCode;
+  visitorType?: VisitorType;
 }
 
 export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
@@ -17,13 +18,15 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
   isSelected,
   onToggle,
   currency = 'ZAR',
+  visitorType = 'INTERNATIONAL',
 }) => {
   if (!activity) return null;
 
   const isFrom = Boolean(activity.priceNote?.startsWith('From'));
-  const minVal = activity.priceMin ?? activity.priceZAR;
-  const maxVal = activity.priceMax ?? activity.priceZAR;
-  const priceDisplay = formatCurrencyRange(minVal, maxVal, currency, isFrom);
+  const resolved = getActivityPricesForVisitor(activity, visitorType);
+  const minVal = resolved.priceMin;
+  const maxVal = resolved.priceMax;
+  const priceDisplay = maxVal === 0 ? 'FREE (SA ID)' : formatCurrencyRange(minVal, maxVal, currency, isFrom);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto no-print">
@@ -75,6 +78,31 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
             {activity.description}
           </p>
 
+          {resolved.isDifferential && (
+            <div className="p-3.5 rounded-2xl bg-[#141726] border border-[#DFB45E]/30 space-y-1.5 text-xs">
+              <div className="flex items-center gap-1.5 text-[#DFB45E] font-medium">
+                <Globe className="w-3.5 h-3.5" />
+                <span>Tiered Visitor Pricing (SA Resident vs. International Tourist)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                <div className="p-2 rounded-lg bg-[#0C0E18] border border-neutral-800">
+                  <span className="text-neutral-400 block text-[10px]">SA Resident (SA ID)</span>
+                  <span className="text-white font-semibold">
+                    {resolved.saMax === 0
+                      ? 'FREE (Birthday)'
+                      : formatCurrencyRange(resolved.saMin, resolved.saMax, currency)}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-[#0C0E18] border border-neutral-800">
+                  <span className="text-neutral-400 block text-[10px]">International Tourist</span>
+                  <span className="text-[#FCE9B0] font-semibold">
+                    {formatCurrencyRange(resolved.intlMin, resolved.intlMax, currency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Highlights */}
           <div>
             <h4 className="text-xs uppercase tracking-wider text-[#DFB45E] font-mono mb-2 flex items-center gap-1">
@@ -95,11 +123,15 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
           <div className="pt-4 border-t border-neutral-800 flex items-center justify-between gap-4">
             <div>
               <span className="text-[10px] text-neutral-400 uppercase tracking-wider block">
-                {activity.priceMax === 0 ? 'Birthday Special' : 'Estimated Price'}
+                {maxVal === 0
+                  ? 'Birthday Special (SA ID)'
+                  : visitorType === 'SA_RESIDENT'
+                  ? 'Estimated SA Resident Price'
+                  : 'Estimated International Price'}
               </span>
               <span className="text-xl sm:text-2xl font-serif-luxury font-bold text-white font-mono">
-                {activity.priceMax === 0 ? 'FREE' : priceDisplay}
-                {activity.priceMax !== 0 && <span className="text-xs font-sans text-neutral-400 font-normal"> / person</span>}
+                {priceDisplay}
+                {maxVal !== 0 && <span className="text-xs font-sans text-neutral-400 font-normal"> / person</span>}
               </span>
               {activity.birthdayNote && (
                 <span className="text-xs text-[#FCE9B0] block mt-0.5 font-medium flex items-center gap-1">

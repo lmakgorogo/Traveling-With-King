@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
-import { ACTIVITIES_DATA, Activity } from './data/activities';
+import { ACTIVITIES_DATA, Activity, VisitorType } from './data/activities';
 import { buildOptimizedItinerary, calculatePricing, resolveDepartureOrHotel } from './utils/itineraryEngine';
 import { CurrencyCode } from './utils/currency';
 import { Navbar } from './components/Navbar';
@@ -24,8 +24,18 @@ export default function App() {
   // Guest count options
   const [guestsCount, setGuestsCount] = useState<number>(2);
 
+  // Visitor Residency Rate Tier (International Tourist vs SA Resident with SA ID)
+  const [visitorType, setVisitorType] = useState<VisitorType>('INTERNATIONAL');
+
   // Multi-Currency Selection (ZAR default, USD, EUR, GBP, AUD supported)
   const [currency, setCurrency] = useState<CurrencyCode>('ZAR');
+
+  const handleSelectCurrency = (code: CurrencyCode) => {
+    setCurrency(code);
+    if (code !== 'ZAR') {
+      setVisitorType('INTERNATIONAL');
+    }
+  };
 
   // Place of departure state (Calculates transport per km after client enters place of departure)
   const [departureId, setDepartureId] = useState<string>('');
@@ -45,10 +55,11 @@ export default function App() {
     return d.toISOString().split('T')[0];
   });
 
-  // Modals state
+  // Modals state & Booking Completion Gate (Pass only visible after booking)
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
   const [isPrintVoucherOpen, setIsPrintVoucherOpen] = useState<boolean>(false);
+  const [hasCompletedBooking, setHasCompletedBooking] = useState<boolean>(false);
 
   // Derived selected activities objects
   const selectedActivities = useMemo(() => {
@@ -57,13 +68,28 @@ export default function App() {
 
   // Derived geographically optimized multi-day itinerary based on hotel or Google Maps address where fetched
   const itinerary = useMemo(() => {
-    return buildOptimizedItinerary(selectedActivities, departureId, customDepartureAddress, customCoordinates);
-  }, [selectedActivities, departureId, customDepartureAddress, customCoordinates]);
+    return buildOptimizedItinerary(
+      selectedActivities,
+      departureId,
+      customDepartureAddress,
+      customCoordinates,
+      visitorType
+    );
+  }, [selectedActivities, departureId, customDepartureAddress, customCoordinates, visitorType]);
 
   // Derived pricing breakdown calculated per km from fetched hotel/address to destination and back
   const pricing = useMemo(() => {
-    return calculatePricing(selectedActivities, itinerary, guestsCount, false, departureId, customDepartureAddress, customCoordinates);
-  }, [selectedActivities, itinerary, guestsCount, departureId, customDepartureAddress, customCoordinates]);
+    return calculatePricing(
+      selectedActivities,
+      itinerary,
+      guestsCount,
+      false,
+      departureId,
+      customDepartureAddress,
+      customCoordinates,
+      visitorType
+    );
+  }, [selectedActivities, itinerary, guestsCount, departureId, customDepartureAddress, customCoordinates, visitorType]);
 
   // Effective departure hotel/address label for vouchers and WhatsApp
   const effectiveDepartureLabel = useMemo(() => {
@@ -121,7 +147,7 @@ export default function App() {
           selectedCount={selectedActivityIds.length}
           onOpenItinerary={() => scrollToSection('how-it-works')}
           currency={currency}
-          onSelectCurrency={setCurrency}
+          onSelectCurrency={handleSelectCurrency}
         />
 
         {/* Main Content */}
@@ -139,6 +165,8 @@ export default function App() {
             onToggleActivity={handleToggleActivity}
             onViewDetails={(act) => setDetailActivity(act)}
             currency={currency}
+            visitorType={visitorType}
+            onSelectVisitorType={setVisitorType}
           />
 
           {/* Smart Geographic Itinerary & Price Breakdown with Departure Hub & Calendar */}
@@ -150,12 +178,19 @@ export default function App() {
             onClearAll={handleClearAll}
             onUpdateGuests={setGuestsCount}
             onOpenBookingModal={() => setIsBookingModalOpen(true)}
-            onOpenPrintVoucher={() => setIsPrintVoucherOpen(true)}
+            onOpenPrintVoucher={() => {
+              if (hasCompletedBooking) {
+                setIsPrintVoucherOpen(true);
+              }
+            }}
+            hasCompletedBooking={hasCompletedBooking}
+            visitorType={visitorType}
+            onSelectVisitorType={setVisitorType}
             startDate={startDate}
             endDate={endDate}
             onSelectDates={handleSelectDates}
             currency={currency}
-            onSelectCurrency={setCurrency}
+            onSelectCurrency={handleSelectCurrency}
             departureId={departureId}
             onSelectDeparture={(id) => {
               setDepartureId(id);
@@ -190,6 +225,7 @@ export default function App() {
           isSelected={detailActivity ? selectedActivityIds.includes(detailActivity.id) : false}
           onToggle={handleToggleActivity}
           currency={currency}
+          visitorType={visitorType}
         />
 
         <BookingModal
@@ -197,7 +233,11 @@ export default function App() {
           onClose={() => setIsBookingModalOpen(false)}
           itinerary={itinerary}
           pricing={pricing}
-          onOpenPrintVoucher={() => setIsPrintVoucherOpen(true)}
+          onOpenPrintVoucher={() => {
+            setHasCompletedBooking(true);
+            setIsPrintVoucherOpen(true);
+          }}
+          onBookingComplete={() => setHasCompletedBooking(true)}
           startDate={startDate}
           endDate={endDate}
           onSelectDates={handleSelectDates}
@@ -208,7 +248,7 @@ export default function App() {
         />
 
         <PrintableVoucherModal
-          isOpen={isPrintVoucherOpen}
+          isOpen={isPrintVoucherOpen && hasCompletedBooking}
           onClose={() => setIsPrintVoucherOpen(false)}
           itinerary={itinerary}
           pricing={pricing}

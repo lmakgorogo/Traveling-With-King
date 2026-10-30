@@ -24,6 +24,7 @@ import {
   Copy,
   Check,
   Send,
+  Lock,
 } from 'lucide-react';
 import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
@@ -33,6 +34,7 @@ interface BookingModalProps {
   itinerary: ItineraryDay[];
   pricing: PricingSummary;
   onOpenPrintVoucher: () => void;
+  onBookingComplete?: () => void;
   startDate: string;
   endDate: string;
   onSelectDates: (start: string, end: string) => void;
@@ -48,6 +50,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   itinerary,
   pricing,
   onOpenPrintVoucher,
+  onBookingComplete,
   startDate,
   endDate,
   onSelectDates,
@@ -83,8 +86,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!isOpen) return null;
 
-  // King's direct phone number: 0824007223 (WhatsApp: +27824007223)
-  const kingWhatsAppNumber = '27824007223';
+  // Dual WhatsApp numbers: Primary 0606487486 (+27606487486) and Secondary 0824007223 (+27824007223)
+  const primaryWhatsAppNumber = '27606487486';
+  const secondaryWhatsAppNumber = '27824007223';
 
   const formattedTravelDates =
     startDate && endDate
@@ -107,7 +111,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     pricing
   );
 
-  const whatsappUrl = `https://wa.me/${kingWhatsAppNumber}?text=${encodeURIComponent(
+  const whatsappUrlPrimary = `https://wa.me/${primaryWhatsAppNumber}?text=${encodeURIComponent(
+    whatsappMessage
+  )}`;
+  const whatsappUrlSecondary = `https://wa.me/${secondaryWhatsAppNumber}?text=${encodeURIComponent(
     whatsappMessage
   )}`;
 
@@ -125,39 +132,49 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const handleBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Send confirmation email automatically in the background
-    if (email.trim()) {
-      fetch('/api/send-confirmation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bookingReference,
-          name: name.trim(),
-          phone: phone.trim(),
-          email: email.trim(),
-          travelDates: formattedTravelDates,
-          pickupLocation: effectivePickup,
-          itinerary,
-          pricing,
-          subject: confirmationEmail.subject,
-          body: confirmationEmail.body,
-        }),
-      }).catch((err) => {
-        console.error('Automated email dispatch error:', err);
-      });
-    }
+    // 1. Automatically send confirmation email & process back-office bookkeeping in the background
+    fetch('/api/send-confirmation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bookingReference,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        travelDates: formattedTravelDates,
+        pickupLocation: effectivePickup,
+        itinerary,
+        pricing,
+        subject: confirmationEmail.subject,
+        body: confirmationEmail.body,
+        whatsappMessage,
+      }),
+    }).catch((err) => {
+      console.error('Automated booking dispatch error:', err);
+    });
 
-    // 2. Trigger WhatsApp booking inquiry to King
-    const link = document.createElement('a');
-    link.href = whatsappUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 2. Automatically dispatch booking inquiry to both WhatsApp numbers (060 648 7486 & 082 400 7223)
+    const link1 = document.createElement('a');
+    link1.href = whatsappUrlPrimary;
+    link1.target = '_blank';
+    link1.rel = 'noopener noreferrer';
+    document.body.appendChild(link1);
+    link1.click();
+    document.body.removeChild(link1);
 
+    setTimeout(() => {
+      const link2 = document.createElement('a');
+      link2.href = whatsappUrlSecondary;
+      link2.target = '_blank';
+      link2.rel = 'noopener noreferrer';
+      document.body.appendChild(link2);
+      link2.click();
+      document.body.removeChild(link2);
+    }, 600);
+
+    onBookingComplete?.();
     setIsSubmitted(true);
   };
 
@@ -188,16 +205,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Book Your Tour with King
               </h3>
               <p className="text-xs text-neutral-400 mt-1">
-                Confirm your details below. Clicking Book automatically sends your confirmation email directly to your inbox and dispatches your tour inquiry to King (+27 82 400 7223) on WhatsApp awaiting schedule confirmation.
+                Confirm your details below. Clicking <strong className="text-neutral-200">Book Now</strong> automatically sends your confirmation email, dispatches your tour booking via WhatsApp to <strong className="text-neutral-200">060 648 7486</strong> &amp; <strong className="text-neutral-200">082 400 7223</strong>, and unlocks your Official Travel Pass.
               </p>
             </div>
 
             {/* Quick Itinerary Summary Box */}
-            <div className="bg-[#151726] border border-neutral-800 rounded-2xl p-4 mb-6 text-xs text-neutral-300">
-              <div className="flex items-center justify-between font-mono text-[#FCE9B0] pb-2 border-b border-neutral-800/80 mb-2">
+            <div className="bg-[#151726] border border-neutral-800 rounded-2xl p-4 mb-6 text-xs text-neutral-300 space-y-2">
+              <div className="flex items-center justify-between font-mono text-[#FCE9B0] pb-2 border-b border-neutral-800/80">
                 <span>
                   {pricing.totalDays} {pricing.totalDays === 1 ? 'Day' : 'Days'} ·{' '}
-                  {pricing.guestsCount} {pricing.guestsCount === 1 ? 'Guest' : 'Guests'}
+                  {pricing.guestsCount} {pricing.guestsCount === 1 ? 'Guest' : 'Guests'} (
+                  {pricing.visitorType === 'SA_RESIDENT' ? 'SA ID Rates' : 'International Rates'})
                 </span>
                 <span className="font-bold text-sm">
                   {formatCurrencyRange(
@@ -209,18 +227,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   )}
                 </span>
               </div>
-              <p className="text-neutral-400 text-[11px] flex items-center gap-1.5 mb-2">
-                <Car className="w-3.5 h-3.5 text-[#DFB45E]" />
+              <p className="text-neutral-400 text-[11px] flex items-center gap-1.5">
+                <Car className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
                 <span>
                   King's Dedicated Transport ({pricing.totalDays}{' '}
-                  {pricing.totalDays === 1 ? 'Day' : 'Days'}) · Concierge Fee 10%
+                  {pricing.totalDays === 1 ? 'Day' : 'Days'} at R11/km · King pays tolls) · Includes Concierge Fee
                 </span>
               </p>
-              <div className="pt-2 border-t border-neutral-800/80 flex items-center gap-1.5 text-[11px] text-[#DFB45E]">
-                <Info className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Please note: Prices may change due to peak time season and supplier rates.
-                </span>
+              <div className="pt-2 border-t border-neutral-800/80 space-y-1 text-[11px] text-[#DFB45E]">
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    King pays all road tolls along your route. Food &amp; meals are for the guest's own account.
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                  <Lock className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
+                  <span>
+                    Your Printable Official Travel Pass will be unlocked immediately after completing your booking.
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -307,7 +333,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <p className="text-[11px] text-neutral-400 mt-1.5 flex items-center gap-1.5">
                     <Car className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
                     <span>
-                      Distance calculated round trip from your pickup address to destinations and back ({pricing.totalDistanceKm} km).
+                      Distance calculated round trip from your pickup address to destinations and back ({pricing.totalDistanceKm} km at R11/km).
                     </span>
                   </p>
                 )}
@@ -348,35 +374,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 )}
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+              <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full sm:flex-1 py-3.5 px-6 rounded-xl text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-95 transition-all shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 px-6 rounded-xl text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-95 transition-all shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Send className="w-4 h-4 text-[#090A0F]" />
-                  <span>Book Now (Send Confirmation Email & WhatsApp)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenPrintVoucher();
-                  }}
-                  className="w-full sm:w-auto py-3.5 px-4 rounded-xl text-xs font-medium text-neutral-300 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-[#DFB45E]" />
-                  <span>Print Voucher</span>
+                  <span>Book Now</span>
                 </button>
               </div>
 
               <p className="text-[11px] text-center text-neutral-500 pt-1">
-                Your confirmation email is automatically sent to <strong className="text-neutral-400">{email || 'your email'}</strong> and booking details are dispatched to King (082 400 7223) awaiting schedule confirmation.
+                Your confirmation email is automatically sent to <strong className="text-neutral-400">{email || 'your email'}</strong> and your booking is automatically dispatched to <strong className="text-neutral-400">060 648 7486</strong> &amp; <strong className="text-neutral-400">082 400 7223</strong>.
               </p>
             </form>
           </div>
         ) : (
-          /* Submission Confirmation View: Automatic Email Dispatch + WhatsApp to King */
+          /* Submission Confirmation View: Automatic Email Dispatch + Dual WhatsApp + Unlocked Travel Pass */
           <div className="space-y-5 py-2">
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-[#DFB45E]/15 border border-[#DFB45E] text-[#DFB45E] flex items-center justify-center mx-auto mb-3">
@@ -397,7 +411,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Booking Confirmed — Reference {bookingReference}
               </h3>
               <p className="text-xs text-neutral-300 max-w-lg mx-auto mt-1">
-                Your official booking confirmation email has been automatically sent to <strong className="text-white">{email}</strong>. Tour details have been forwarded to <strong className="text-[#FCE9B0]">King (082 400 7223)</strong> awaiting schedule confirmation.
+                Your official booking confirmation email has been automatically sent to <strong className="text-white">{email}</strong> and your tour details have been dispatched to <strong className="text-[#FCE9B0]">060 648 7486</strong> and <strong className="text-[#FCE9B0]">082 400 7223</strong>. Your Official Travel Pass is now unlocked below.
               </p>
             </div>
 
@@ -446,7 +460,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     {effectivePickup}
                   </div>
                   <div className="text-neutral-400 text-[11px]">
-                    Guide: King (+27 82 400 7223) · {pricing.totalDistanceKm} km round trip
+                    Guide: King (060 648 7486) · {pricing.totalDistanceKm} km round trip
                   </div>
                 </div>
               </div>
@@ -459,32 +473,43 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
-            {/* Direct Action Links for WhatsApp & Printable Pass */}
+            {/* Unlocked Official Travel Pass CTA */}
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenPrintVoucher();
+              }}
+              className="w-full py-3.5 px-5 rounded-xl text-xs sm:text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg gold-glow cursor-pointer"
+            >
+              <FileText className="w-4 h-4 text-[#090A0F]" />
+              <span>View &amp; Download Official Travel Pass (PDF)</span>
+            </button>
+
+            {/* Dual WhatsApp Dispatch Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <a
-                href={whatsappUrl}
+                href={whatsappUrlPrimary}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-3 rounded-xl text-xs font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-md"
+                className="px-4 py-3 rounded-xl text-xs font-semibold text-white bg-[#1C1F32] hover:bg-[#252942] border border-[#DFB45E]/40 transition-colors flex items-center justify-center gap-2"
               >
-                <MessageSquare className="w-4 h-4 text-[#090A0F]" />
-                <span>Open WhatsApp with King (082 400 7223)</span>
+                <MessageSquare className="w-4 h-4 text-[#DFB45E]" />
+                <span>WhatsApp 1: 060 648 7486</span>
               </a>
 
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenPrintVoucher();
-                }}
-                className="px-4 py-3 rounded-xl text-xs font-semibold text-white bg-[#1C1F32] hover:bg-[#252942] border border-[#DFB45E]/40 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              <a
+                href={whatsappUrlSecondary}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-3 rounded-xl text-xs font-semibold text-white bg-[#1C1F32] hover:bg-[#252942] border border-[#DFB45E]/40 transition-colors flex items-center justify-center gap-2"
               >
-                <FileText className="w-4 h-4 text-[#DFB45E]" />
-                <span>View Printable Travel Voucher</span>
-              </button>
+                <MessageSquare className="w-4 h-4 text-[#DFB45E]" />
+                <span>WhatsApp 2: 082 400 7223</span>
+              </a>
             </div>
 
-            <div className="pt-2 border-t border-neutral-800 flex justify-end">
+            <div className="pt-2 border-t border-neutral-800 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -493,7 +518,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 }}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 cursor-pointer"
               >
-                Done & Return to Itinerary
+                Done &amp; Return to Itinerary
               </button>
             </div>
           </div>

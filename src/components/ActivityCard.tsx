@@ -1,7 +1,7 @@
 import React from 'react';
-import { Activity } from '../data/activities';
-import { Check, Plus, Clock, MapPin, Sparkles, ChevronRight } from 'lucide-react';
-import { CurrencyCode, formatCurrencyRange, formatCurrency } from '../utils/currency';
+import { Activity, VisitorType, getActivityPricesForVisitor } from '../data/activities';
+import { Check, Plus, Clock, MapPin, ChevronRight, Globe } from 'lucide-react';
+import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -9,6 +9,7 @@ interface ActivityCardProps {
   onToggle: (activityId: string) => void;
   onViewDetails: (activity: Activity) => void;
   currency?: CurrencyCode;
+  visitorType?: VisitorType;
 }
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
@@ -17,14 +18,16 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onToggle,
   onViewDetails,
   currency = 'ZAR',
+  visitorType = 'INTERNATIONAL',
 }) => {
   const isFrom = Boolean(activity.priceNote?.startsWith('From'));
-  const minVal = activity.priceMin ?? activity.priceZAR;
-  const maxVal = activity.priceMax ?? activity.priceZAR;
+  const resolved = getActivityPricesForVisitor(activity, visitorType);
+  const minVal = resolved.priceMin;
+  const maxVal = resolved.priceMax;
 
-  const isBirthdayFree = activity.priceMax === 0;
+  const isBirthdayFree = maxVal === 0;
   const priceDisplay = isBirthdayFree
-    ? 'FREE'
+    ? 'FREE (SA ID)'
     : formatCurrencyRange(minVal, maxVal, currency, isFrom);
 
   return (
@@ -54,6 +57,12 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {activity.isBirthdaySpecial && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#DFB45E] text-[#090A0F] shadow-sm flex items-center gap-1">
                 🎂 Birthday Treat
+              </span>
+            )}
+            {resolved.isDifferential && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#141829]/90 text-[#FCE9B0] border border-[#DFB45E]/40 shadow-sm flex items-center gap-1">
+                <Globe className="w-2.5 h-2.5 text-[#DFB45E]" />
+                <span>SA / Intl Tier</span>
               </span>
             )}
           </div>
@@ -94,16 +103,26 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {activity.subtitle}
           </p>
 
-          <p className="text-xs text-neutral-300 font-normal line-clamp-2 leading-relaxed mb-4">
+          <p className="text-xs text-neutral-300 font-normal line-clamp-2 leading-relaxed mb-3">
             {activity.description}
           </p>
+
+          {activity.pricingTierNote && (
+            <div className="mb-3 px-2.5 py-1.5 rounded-lg bg-[#141625] border border-[#DFB45E]/25 text-[10px] text-[#FCE9B0] font-mono leading-snug">
+              {activity.pricingTierNote}
+            </div>
+          )}
         </div>
 
         {/* Price & Action Row */}
         <div className="pt-3 border-t border-neutral-800/80 flex items-center justify-between gap-3 mt-auto">
           <div>
             <div className="text-[10px] text-neutral-400 uppercase tracking-wider">
-              {isBirthdayFree ? 'Birthday Rate' : 'Estimated Entry'}
+              {isBirthdayFree
+                ? 'SA Citizen Birthday Rate'
+                : visitorType === 'SA_RESIDENT'
+                ? 'SA Resident Rate'
+                : 'International Rate'}
             </div>
             <div className={`text-sm sm:text-base font-semibold font-mono tabular-nums ${isBirthdayFree ? 'text-[#FCE9B0]' : 'text-white'}`}>
               {priceDisplay}

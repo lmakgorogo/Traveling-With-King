@@ -1,3 +1,5 @@
+export type VisitorType = 'INTERNATIONAL' | 'SA_RESIDENT';
+
 export interface Activity {
   id: string;
   name: string;
@@ -8,6 +10,12 @@ export interface Activity {
   priceMin: number;
   priceMax: number;
   priceZAR: number;
+  saResidentPriceMin?: number;
+  saResidentPriceMax?: number;
+  internationalPriceMin?: number;
+  internationalPriceMax?: number;
+  hasInternationalDifferential?: boolean;
+  pricingTierNote?: string;
   priceNote?: string;
   duration: string;
   image: string;
@@ -16,6 +24,56 @@ export interface Activity {
   recommendedSlot: 'Morning' | 'Midday' | 'Afternoon' | 'Sunset / Evening';
   isBirthdaySpecial?: boolean;
   birthdayNote?: string;
+}
+
+/**
+ * Resolves the effective min, max, and average ZAR price of an activity based on whether
+ * the traveler is an International Tourist or a South African Resident (with SA ID).
+ */
+export function getActivityPricesForVisitor(
+  activity: Activity,
+  visitorType: VisitorType = 'INTERNATIONAL'
+): {
+  priceMin: number;
+  priceMax: number;
+  priceZAR: number;
+  isDifferential: boolean;
+  saMin: number;
+  saMax: number;
+  intlMin: number;
+  intlMax: number;
+} {
+  const saMin = activity.saResidentPriceMin ?? activity.priceMin ?? activity.priceZAR;
+  const saMax = activity.saResidentPriceMax ?? activity.priceMax ?? activity.priceZAR;
+  const intlMin = activity.internationalPriceMin ?? activity.priceMin ?? activity.priceZAR;
+  const intlMax = activity.internationalPriceMax ?? activity.priceMax ?? activity.priceZAR;
+  const isDifferential = Boolean(
+    activity.hasInternationalDifferential || saMin !== intlMin || saMax !== intlMax
+  );
+
+  if (visitorType === 'SA_RESIDENT') {
+    return {
+      priceMin: saMin,
+      priceMax: saMax,
+      priceZAR: Math.round((saMin + saMax) / 2),
+      isDifferential,
+      saMin,
+      saMax,
+      intlMin,
+      intlMax,
+    };
+  }
+
+  return {
+    priceMin: intlMin,
+    priceMax: intlMax,
+    priceZAR: Math.round((intlMin + intlMax) / 2),
+    isDifferential,
+    saMin,
+    saMax,
+    intlMin,
+    intlMax,
+  };
 }
 
 export interface ZoneCluster {
@@ -148,11 +206,17 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 390,
     priceMax: 520,
     priceZAR: 455,
-    priceNote: 'Morning vs Afternoon rates',
+    saResidentPriceMin: 390,
+    saResidentPriceMax: 450,
+    internationalPriceMin: 430,
+    internationalPriceMax: 520,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Resident: R390–R450 pp · International: R430–R520 pp',
+    priceNote: 'SA vs International & Morning/Afternoon rates',
     duration: '2.5 Hours',
     image: '/images/table_mountain_cableway_1791729785922.jpg',
-    description: 'Glide up 1,067 meters above sea level in a 360-degree rotating cable car to the flat-topped summit of Table Mountain. Off-peak afternoon returns start around R390, up to R520 for morning departures.',
-    highlights: ['Free Return in Birthday Month with SA ID', 'Morning vs Afternoon Return Rates', '360° Rotating Floor Cabin', 'Panoramic Mountain Plateau Walk'],
+    description: 'Glide up 1,067 meters above sea level in a 360-degree rotating cable car to the flat-topped summit of Table Mountain. Local SA return rates start from R390–R450, while standard international return tickets range from R430–R520.',
+    highlights: ['Free Return in Birthday Month with SA ID', 'SA Resident vs International Return Rates', '360° Rotating Floor Cabin', 'Panoramic Mountain Plateau Walk'],
     recommendedSlot: 'Morning',
     isBirthdaySpecial: true,
     birthdayNote: 'Free return ticket in your birthday month with valid SA ID',
@@ -256,13 +320,19 @@ export const ACTIVITIES_DATA: Activity[] = [
     region: "Simon's Town",
     zoneId: 'ZONE_PENINSULA',
     priceMin: 190,
-    priceMax: 200,
-    priceZAR: 195,
-    priceNote: 'SANParks conservation fee',
+    priceMax: 215,
+    priceZAR: 205,
+    saResidentPriceMin: 55,
+    saResidentPriceMax: 55,
+    internationalPriceMin: 190,
+    internationalPriceMax: 215,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SANParks Fee: R55 pp (SA ID) · R190–R215 pp (International)',
+    priceNote: 'SANParks conservation fee (SA vs International)',
     duration: '2 Hours',
     image: '/images/boulders_beach_penguins_1791729773950.jpg',
-    description: 'Stroll on sheltered wooden boardwalks alongside crystal turquoise coves and giant ancient granite boulders where thousands of African penguins nest, swim, and waddle.',
-    highlights: ['Full Conservation Boardwalk Access', 'Sheltered Warm Water Swimming', 'Conservation Education Center'],
+    description: 'Stroll on sheltered wooden boardwalks alongside crystal turquoise coves and giant ancient granite boulders where thousands of African penguins nest, swim, and waddle. SANParks charges R55 pp for SA Residents (with SA ID) and R190–R215 pp for International Visitors.',
+    highlights: ['SANParks Tiered Entry: R55 (SA ID) / R190–R215 (International)', 'Full Conservation Boardwalk Access', 'Sheltered Warm Water Swimming'],
     recommendedSlot: 'Morning',
   },
   // 12. Cape Point Nature Reserve
@@ -274,13 +344,19 @@ export const ACTIVITIES_DATA: Activity[] = [
     region: 'Cape Peninsula',
     zoneId: 'ZONE_PENINSULA',
     priceMin: 400,
-    priceMax: 450,
-    priceZAR: 425,
-    priceNote: 'SANParks conservation fee',
+    priceMax: 455,
+    priceZAR: 430,
+    saResidentPriceMin: 105,
+    saResidentPriceMax: 105,
+    internationalPriceMin: 400,
+    internationalPriceMax: 455,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SANParks Fee: R105 pp (SA ID) · R400–R455 pp (International)',
+    priceNote: 'SANParks conservation fee (SA vs International)',
     duration: '3.5 Hours',
     image: '/images/cape_point_reserve_1791729912601.jpg',
-    description: 'Explore towering maritime cliffs, dramatic ocean swells, indigenous fynbos vegetation, wild baboons, mountain zebras, and the historic Flying Dutchman Funicular lighthouse.',
-    highlights: ['Cape of Good Hope Sign Photo', 'Historic Old Lighthouse Funicular', 'Shipwreck Walking Trails'],
+    description: 'Explore towering maritime cliffs, dramatic ocean swells, indigenous fynbos vegetation, wild baboons, mountain zebras, and the historic Flying Dutchman Funicular lighthouse. SANParks conservation entry is R105 pp for SA Residents (with SA ID) and R400–R455 pp for International Tourists.',
+    highlights: ['SANParks Tiered Entry: R105 (SA ID) / R400–R455 (International)', 'Cape of Good Hope Sign Photo', 'Historic Old Lighthouse Funicular'],
     recommendedSlot: 'Midday',
   },
   // 13. Ocean Safari
@@ -328,13 +404,19 @@ export const ACTIVITIES_DATA: Activity[] = [
     region: 'Atlantis Dunes',
     zoneId: 'ZONE_WEST_COAST',
     priceMin: 1100,
-    priceMax: 1100,
-    priceZAR: 1100,
-    priceNote: 'R800 booking + compulsory R300 permit',
+    priceMax: 1250,
+    priceZAR: 1175,
+    saResidentPriceMin: 1050,
+    saResidentPriceMax: 1100,
+    internationalPriceMin: 1100,
+    internationalPriceMax: 1250,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Resident: R1,050–R1,100 pp · International: R1,100–R1,250 pp (incl. reserve permit)',
+    priceNote: 'Includes compulsory Witzands reserve permit',
     duration: '2 Hours',
     image: '/images/quad_biking_atlantis_1791729836912.jpg',
-    description: 'Take command of an automatic 4x4 quad bike through 27 square kilometers of rolling pure-white desert dunes. Feel the rush of scaling steep sand peaks and drifting along dune ridges.',
-    highlights: ['Automatic 350cc Quads', 'Safety Gear & Training Included', 'Dune Peak Photo Stops'],
+    description: 'Take command of an automatic 4x4 quad bike through 27 square kilometers of rolling pure-white desert dunes. Includes the compulsory City of Cape Town Witzands Aquifer Nature Reserve permit.',
+    highlights: ['Automatic 350cc Quads', 'Safety Gear & Reserve Permit Included', 'Dune Peak Photo Stops'],
     recommendedSlot: 'Morning',
   },
   // 16. Sandboarding Atlantis Dunes
@@ -363,14 +445,20 @@ export const ACTIVITIES_DATA: Activity[] = [
     category: 'Wildlife & Safari',
     region: 'Karoo / Touws River',
     zoneId: 'ZONE_KAROO',
-    priceMin: 2150,
-    priceMax: 2750,
-    priceZAR: 2450,
-    priceNote: 'Depending on standard vs VIP',
+    priceMin: 2450,
+    priceMax: 2950,
+    priceZAR: 2700,
+    saResidentPriceMin: 1950,
+    saResidentPriceMax: 2250,
+    internationalPriceMin: 2450,
+    internationalPriceMax: 2950,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Resident: R1,950–R2,250 pp · International: R2,450–R2,950 pp',
+    priceNote: 'SA Resident vs International Safari rates',
     duration: 'Half-Day',
     image: '/images/aquila_safari_1791728619653.jpg',
-    description: 'A malaria-free 10,000-hectare Karoo conservatory. Journey in open 4x4 game safari cruisers guided by ranger experts to spot the Big 5, followed by a lavish African lodge buffet feast.',
-    highlights: ['Big 5 Game Drive Experience', 'Full Buffet Lunch at Lodge', 'Malaria-Free Nature Conservatory'],
+    description: 'A malaria-free 10,000-hectare Karoo conservatory. Journey in open 4x4 game safari cruisers guided by ranger experts to spot the Big 5, followed by a lavish African lodge buffet feast. Offers resident rates for SA ID holders and standard safari packages for international guests.',
+    highlights: ['Big 5 Game Drive Experience', 'Full Buffet Lunch at Lodge', 'SA Resident vs International Safari Tier'],
     recommendedSlot: 'Midday',
   },
   // 18. Shark Cage Diving Gansbaai
@@ -400,13 +488,19 @@ export const ACTIVITIES_DATA: Activity[] = [
     region: 'Elgin / Constantia',
     zoneId: 'ZONE_CT_CENTRAL',
     priceMin: 1195,
-    priceMax: 1195,
-    priceZAR: 1195,
-    priceNote: 'Cape Canopy Tour rate',
+    priceMax: 1295,
+    priceZAR: 1245,
+    saResidentPriceMin: 1095,
+    saResidentPriceMax: 1195,
+    internationalPriceMin: 1195,
+    internationalPriceMax: 1295,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Resident: R1,095–R1,195 pp · International: R1,195–R1,295 pp (incl. CapeNature conservation fee)',
+    priceNote: 'Includes CapeNature reserve permit',
     duration: '2.5 Hours',
     image: '/images/zipline_canopy_1791729943294.jpg',
     description: 'One of Africa’s longest and highest zipline tours. Soar across 1.4 kilometers of steel cables above tree canopies and deep mountain gorges with panoramic ocean views.',
-    highlights: ['12 High-Speed Platforms', 'Indigenous Fynbos Canopy', 'Double-Safety Cable Rigging'],
+    highlights: ['12 High-Speed Platforms', 'Indigenous Fynbos Canopy', 'Includes CapeNature Conservation Permit'],
     recommendedSlot: 'Morning',
   },
   // 20. Harley Davidson Coastal Excursion
@@ -467,21 +561,27 @@ export const ACTIVITIES_DATA: Activity[] = [
   {
     id: 'two-oceans-aquarium-birthday',
     name: 'Two Oceans Aquarium (Free Birthday Entry)',
-    subtitle: 'Free admission on your birthday or up to 6 days after',
+    subtitle: 'Free admission on your birthday or up to 6 days after (SA ID)',
     category: 'Free Birthday Treats',
     region: 'V&A Waterfront',
     zoneId: 'ZONE_CT_CENTRAL',
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free on birthday (+6 days) with SA ID',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 235,
+    internationalPriceMax: 265,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA ID Birthday: FREE · International Visitor: R235–R265 pp',
+    priceNote: 'Free on birthday (+6 days) with SA ID | R235–R265 Intl',
     duration: '2 Hours',
     image: '/images/aquarium_two_oceans.jpg',
-    description: 'Celebrate your birthday with ragged-tooth sharks, giant green sea turtles, and playful African penguins. South African citizens and permanent residents aged 4 and older receive 100% free admission on their actual birthday or within the 6 days following by presenting a valid South African ID or birth certificate.',
-    highlights: ['100% Free Entry for SA Citizens on Birthday + 6 Days', 'Spectacular Ocean Exhibit Glass Tunnel', 'Valid SA ID, Driver’s License or Birth Certificate Required'],
+    description: 'Celebrate your birthday with ragged-tooth sharks, giant green sea turtles, and playful African penguins. South African citizens and permanent residents receive 100% free admission on their birthday or within 6 days with a valid SA ID. International visitors pay standard admission (R235–R265 pp).',
+    highlights: ['100% Free Entry for SA Citizens on Birthday + 6 Days', 'Standard R235–R265 Entry for International Visitors', 'Spectacular Ocean Exhibit Glass Tunnel'],
     recommendedSlot: 'Morning',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free admission on your birthday or within 6 days with valid SA ID',
+    birthdayNote: 'Free admission on your birthday (+6 days) with valid SA ID (R235–R265 International)',
   },
   {
     id: 'cape-wheel-birthday',
@@ -493,33 +593,45 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free ride with Birthday Club voucher or SA ID',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 175,
+    internationalPriceMax: 250,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Birthday Club: FREE · International Standard: R175–R250 pp',
+    priceNote: 'Free ride with SA ID / Birthday Club | R175–R250 Intl',
     duration: '45 Mins',
     image: '/images/cape_wheel_waterfront.jpg',
-    description: 'Rise 40 meters above the harbour with 360-degree panoramic vistas of Table Mountain, Robben Island, and the Cape Town stadium. Register for the Cape Wheel Birthday Club online to receive a complimentary ride voucher valid for 30 days from your birthday, or claim on your actual birthday with a valid South African ID.',
-    highlights: ['Free 15-Minute Observation Ride', '30-Day Voucher Window with Birthday Club', 'Unmatched V&A Waterfront & Mountain Panoramas'],
+    description: 'Rise 40 meters above the harbour with 360-degree panoramic vistas of Table Mountain, Robben Island, and the Cape Town stadium. Free birthday voucher for registered SA residents, or R175–R250 standard ticket for international visitors.',
+    highlights: ['Free 15-Minute Observation Ride (SA Birthday Club)', 'Standard Ticket R175–R250 for Non-Residents', 'Unmatched V&A Waterfront & Mountain Panoramas'],
     recommendedSlot: 'Sunset / Evening',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free ride voucher valid for 30 days via Birthday Club or on birthday with SA ID',
+    birthdayNote: 'Free ride with SA ID / Birthday Club (R175–R250 International)',
   },
   {
     id: 'table-mountain-birthday-ticket',
     name: 'Table Mountain Cableway (Free Birthday Ticket)',
-    subtitle: 'Free return cable car ticket during your entire birthday month',
+    subtitle: 'Free return cable car ticket during your entire birthday month (SA ID)',
     category: 'Free Birthday Treats',
     region: 'Cape Town Central',
     zoneId: 'ZONE_CT_CENTRAL',
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free during birthday month with SA ID',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 430,
+    internationalPriceMax: 520,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Citizen Birthday Month: FREE · International: R430–R520 pp',
+    priceNote: 'Free in birthday month with SA ID | R430–R520 Intl',
     duration: '2.5 Hours',
     image: '/images/table_mountain_cableway_1791729785922.jpg',
-    description: 'South African citizens can ascend to the Wonder of Nature for free! Collect your complimentary return cable car ticket any day during your calendar birthday month upon presenting your valid South African ID document or smart card.',
-    highlights: ['100% Free Return Cableway Ticket During Birthday Month', 'Valid for All SA Citizens with Green ID / Smart Card', 'Rotating 360° Floor Cabin to Table Mountain Summit'],
+    description: 'South African citizens can ascend to the Wonder of Nature for free any day during their calendar birthday month upon presenting a valid SA ID. International visitors pay standard return cableway fare (R430–R520 pp).',
+    highlights: ['100% Free Return Cableway Ticket During Birthday Month (SA ID)', 'Standard R430–R520 Return Fare for International Tourists', 'Rotating 360° Floor Cabin to Table Mountain Summit'],
     recommendedSlot: 'Morning',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free return ticket valid any day in your birthday month with valid SA ID',
+    birthdayNote: 'Free return ticket in birthday month with valid SA ID (R430–R520 International)',
   },
   {
     id: 'galileo-cinema-birthday',
@@ -531,11 +643,17 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free in birthday week (summer season)',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 175,
+    internationalPriceMax: 230,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA ID Birthday Week: FREE · International: R175–R230 pp',
+    priceNote: 'Free in birthday week with SA ID | R175–R230 Intl',
     duration: '3 Hours',
     image: '/images/galileo_open_cinema.jpg',
-    description: 'Enjoy cinema under the stars at Kirstenbosch Botanical Gardens or the V&A Waterfront during the summer season (November to April). South African citizens receive a free ticket, backrest, and blanket during their birthday week (Monday to Sunday) upon presenting a valid ID.',
-    highlights: ['Free Movie Ticket During Birthday Week (Mon - Sun)', 'Complimentary Comfortable Backrest & Warm Blanket', 'Iconic Outdoor Kirstenbosch Garden Setting'],
+    description: 'Enjoy cinema under the stars at Kirstenbosch Botanical Gardens or the V&A Waterfront during the summer season. South African citizens receive a free ticket, backrest, and blanket during their birthday week with valid SA ID.',
+    highlights: ['Free Movie Ticket During Birthday Week (SA ID)', 'Complimentary Comfortable Backrest & Warm Blanket', 'Iconic Outdoor Kirstenbosch Garden Setting'],
     recommendedSlot: 'Sunset / Evening',
     isBirthdaySpecial: true,
     birthdayNote: 'Free ticket, backrest, and blanket during birthday week with SA ID',
@@ -550,14 +668,20 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free tour on birthday with SA ID',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 600,
+    internationalPriceMax: 600,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA Citizen Birthday: FREE (Normal SA R400) · International Tourist: R600 pp',
+    priceNote: 'Free on birthday with SA ID | R600 pp International',
     duration: '3.5 Hours',
     image: '/images/sunset_catamaran_1791729878997.jpg',
-    description: 'South African citizens receive a complimentary educational tour of Robben Island on their actual birthday. Present your original South African ID at the Nelson Mandela Gateway ticket counter to collect your free passenger ferry and guided prison tour ticket.',
-    highlights: ['Free Return Passenger Ferry Across Table Bay', 'Former Political Prisoner Guided Maximum Security Tour', 'Nelson Mandela’s Historic Cell & Limestone Quarry'],
+    description: 'South African citizens receive a complimentary educational tour of Robben Island on their actual birthday upon presenting a valid SA ID. For International Tourists, the official Robben Island Museum ferry & guided prison tour rate is R600 per adult.',
+    highlights: ['Free Return Ferry & Tour on Birthday (SA ID Required)', 'Official R600 Adult Rate for International Tourists', 'Former Political Prisoner Guided Maximum Security Tour'],
     recommendedSlot: 'Morning',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free tour on actual birthday by presenting valid SA ID at ticket office',
+    birthdayNote: 'Free tour on actual birthday with valid SA ID (R600 pp for International Tourists)',
   },
   {
     id: 'sky-hi-ride-birthday',
@@ -588,14 +712,20 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free in birthday month for SA/African passport holders',
+    saResidentPriceMin: 0,
+    saResidentPriceMax: 0,
+    internationalPriceMin: 250,
+    internationalPriceMax: 250,
+    hasInternationalDifferential: true,
+    pricingTierNote: 'SA / African Passport Birthday Month: FREE · International: R250 pp',
+    priceNote: 'Free in birthday month (SA/African ID) | R250 Intl',
     duration: '2 Hours',
     image: '/images/hero_cape_luxury_1791728587320.jpg',
-    description: 'Explore over 100 art galleries carved out of the monumental grain silos at the V&A Waterfront. South African citizens and African passport holders receive 100% free museum admission during their entire birthday month upon presenting official proof of birth date.',
-    highlights: ['Free Entry Any Day During Birthday Month', 'World-Class Modern African Visual Art', 'Historic Architectural Silo Marvel'],
+    description: 'Explore over 100 art galleries carved out of the monumental grain silos at the V&A Waterfront. South African citizens and African passport holders receive 100% free museum admission during their entire birthday month; non-African international visitors pay R250 pp.',
+    highlights: ['Free Entry During Birthday Month (SA & African Passports)', 'R250 Standard Admission for Overseas International Visitors', 'World-Class Modern African Visual Art'],
     recommendedSlot: 'Midday',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free admission during birthday month with SA ID or African passport',
+    birthdayNote: 'Free admission in birthday month with SA/African ID (R250 International)',
   },
   {
     id: 'durbanville-wine-safari-birthday',
@@ -610,7 +740,7 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceNote: 'Free ticket with 1 paying companion in birthday week',
     duration: '4 Hours',
     image: '/images/winelands_tasting_1791728598858.jpg',
-    description: 'Hop aboard an open safari vehicle touring award-winning Durbanville valley wine estates. South African birthday guests receive a free ticket and a complimentary glass of Cap Classique when accompanied by at least one paying guest within one week of their birthday.',
+    description: 'Hop aboard an open safari vehicle touring award-winning Durbanville valley wine estates. Birthday guests receive a free ticket and a complimentary glass of Cap Classique when accompanied by at least one paying guest within one week of their birthday.',
     highlights: ['Free Birthday Safari Ticket with 1 Paying Companion', 'Complimentary Glass of Cap Classique Sparkling Wine', 'Panoramic Durbanville Hills Vineyard Landscapes'],
     recommendedSlot: 'Midday',
     isBirthdaySpecial: true,
@@ -626,14 +756,14 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceMin: 0,
     priceMax: 0,
     priceZAR: 0,
-    priceNote: 'Free 1-hour session on birthday with SA ID',
+    priceNote: 'Free 1-hour session on birthday with ID',
     duration: '1 Hour',
     image: '/images/quad_biking_atlantis_1791729836912.jpg',
-    description: 'High-energy indoor action for all ages with dodgeball arenas, foam pits, and warrior ninja obstacle courses. South African citizens get a free one-hour play pass on the day of their birthday at either the Canal Walk or Tokai parks with valid ID.',
+    description: 'High-energy indoor action for all ages with dodgeball arenas, foam pits, and warrior ninja obstacle courses. Birthday guests get a free one-hour play pass on the day of their birthday at either the Canal Walk or Tokai parks with valid ID.',
     highlights: ['Free 60-Minute Play Session on Birthday', 'Ninja Obstacle Courses & Trampoline Arenas', 'Valid at Canal Walk and Tokai Parks with ID'],
     recommendedSlot: 'Afternoon',
     isBirthdaySpecial: true,
-    birthdayNote: 'Free 1-hour play session on your birthday with valid SA ID',
+    birthdayNote: 'Free 1-hour play session on your birthday with valid ID',
   },
   {
     id: 'va-waterfront-canal-pedal-birthday',
@@ -648,7 +778,7 @@ export const ACTIVITIES_DATA: Activity[] = [
     priceNote: 'Free ride before 12pm on birthday/birthday week',
     duration: '1 Hour',
     image: '/images/sunset_catamaran_1791729878997.jpg',
-    description: 'Pedal gently along the tranquil sheltered waterways connecting the V&A Waterfront and Battery Park. South African citizens receive a complimentary pedal boat session before 12:00 PM on their birthday or during their birthday week with valid ID.',
+    description: 'Pedal gently along the tranquil sheltered waterways connecting the V&A Waterfront and Battery Park. Receive a complimentary pedal boat session before 12:00 PM on your birthday or during your birthday week with valid ID.',
     highlights: ['Free Pedal Boat Ride Before 12:00 PM', 'Calm Waterway Views of Table Mountain & Silo District', 'Valid on Birthday or Birthday Week with ID'],
     recommendedSlot: 'Morning',
     isBirthdaySpecial: true,

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Activity, ACTIVITIES_DATA, REGIONAL_ZONES } from '../data/activities';
+import { Activity, ACTIVITIES_DATA, REGIONAL_ZONES, VisitorType } from '../data/activities';
 import { ActivityCard } from './ActivityCard';
-import { Search, SlidersHorizontal, Sparkles, Filter, CheckCircle2 } from 'lucide-react';
+import { Search, SlidersHorizontal, Filter, Globe, ShieldCheck } from 'lucide-react';
 
 import { CurrencyCode } from '../utils/currency';
 
@@ -10,6 +10,8 @@ interface CatalogSectionProps {
   onToggleActivity: (id: string) => void;
   onViewDetails: (activity: Activity) => void;
   currency?: CurrencyCode;
+  visitorType?: VisitorType;
+  onSelectVisitorType?: (type: VisitorType) => void;
 }
 
 const CATEGORIES = [
@@ -27,6 +29,8 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
   onToggleActivity,
   onViewDetails,
   currency = 'ZAR',
+  visitorType = 'INTERNATIONAL',
+  onSelectVisitorType,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All Experiences');
   const [activeZone, setActiveZone] = useState<string>('ALL');
@@ -65,20 +69,51 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
             Choose What You Want to Experience
           </h2>
           <p className="text-sm text-neutral-400 mt-2 max-w-xl">
-            Select any destinations, birthday treats, or thrills below. King’s smart scheduling engine will automatically group them into cohesive days with private round-trip transfers. <span className="text-neutral-500 text-xs block sm:inline sm:ml-1 font-sans">*Prices may change due to peak time season.</span>
+            Select any destinations, birthday treats, or thrills below. SANParks &amp; reserve conservation fees differ for SA Residents (with SA ID) vs. International Tourists—choose your visitor tier below to factor exact rates into your itinerary.
           </p>
         </div>
 
-        {/* Selected Count Indicator */}
-        <div className="flex items-center gap-3 bg-[#12141F] px-4 py-2.5 rounded-2xl border border-[#DFB45E]/30 shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-mono font-bold flex items-center justify-center text-sm">
-            {selectedActivityIds.length}
-          </div>
-          <div className="text-xs">
-            <span className="font-semibold text-white block">
-              {selectedActivityIds.length === 1 ? '1 Activity Selected' : `${selectedActivityIds.length} Activities Selected`}
-            </span>
-            <span className="text-neutral-400">Ready to organize into days</span>
+        {/* Selected Count & Visitor Rate Toggle */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          {onSelectVisitorType && (
+            <div className="bg-[#12141F] p-1.5 rounded-2xl border border-[#DFB45E]/30 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onSelectVisitorType('INTERNATIONAL')}
+                className={`px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                  visitorType === 'INTERNATIONAL'
+                    ? 'bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-semibold shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>International Tourist</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectVisitorType('SA_RESIDENT')}
+                className={`px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                  visitorType === 'SA_RESIDENT'
+                    ? 'bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-semibold shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>SA Resident (SA ID)</span>
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 bg-[#12141F] px-4 py-2.5 rounded-2xl border border-[#DFB45E]/30 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#DFB45E] to-[#BA8936] text-[#090A0F] font-mono font-bold flex items-center justify-center text-sm">
+              {selectedActivityIds.length}
+            </div>
+            <div className="text-xs">
+              <span className="font-semibold text-white block">
+                {selectedActivityIds.length === 1 ? '1 Activity Selected' : `${selectedActivityIds.length} Activities Selected`}
+              </span>
+              <span className="text-neutral-400">Ready to organize into days</span>
+            </div>
           </div>
         </div>
       </div>
@@ -90,12 +125,12 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
             🎂
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold text-[#FCE9B0]">Celebrating Your Birthday in Cape Town?</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DFB45E] text-[#090A0F] uppercase">R0 Free Perks</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DFB45E] text-[#090A0F] uppercase">R0 Free Perks (SA ID)</span>
             </div>
             <p className="text-xs text-neutral-300 mt-0.5">
-              Enjoy complimentary entry to Table Mountain, Two Oceans Aquarium, The Cape Wheel, Robben Island, Galileo Cinema & more with valid SA ID. King provides your private 7-seater chauffeured transfers!
+              South African citizens enjoy complimentary entry to Table Mountain, Two Oceans Aquarium, The Cape Wheel, Robben Island &amp; Galileo Cinema with valid SA ID. International visitors are automatically calculated at standard visitor admission rates.
             </p>
           </div>
         </div>
@@ -181,6 +216,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
               onToggle={onToggleActivity}
               onViewDetails={onViewDetails}
               currency={currency}
+              visitorType={visitorType}
             />
           ))}
         </div>

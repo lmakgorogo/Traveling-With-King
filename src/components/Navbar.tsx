@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             href="#catalog"
             className="hover:text-[#FCE9B0] transition-colors whitespace-nowrap shrink-0"
           >
-            Activity Catalog
+            Experiences
           </a>
           <a
             href="#how-it-works"
