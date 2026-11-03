@@ -875,7 +875,7 @@ export function formatConfirmationEmail(
   subject: string;
   body: string;
 } {
-  const fromEmail = 'lerato@marubcreations.co.za';
+  const fromEmail = 'lmakgorogo@gmail.com';
   const fromName = 'Traveling with King';
   const toEmail = clientEmail ? clientEmail.trim() : '';
 

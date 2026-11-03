@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { ACTIVITIES_DATA, Activity, VisitorType } from './data/activities';
 import { buildOptimizedItinerary, calculatePricing, resolveDepartureOrHotel } from './utils/itineraryEngine';
@@ -13,6 +13,7 @@ import { StickyItineraryBar } from './components/StickyItineraryBar';
 import { BookingModal } from './components/BookingModal';
 import { PrintableVoucherModal } from './components/PrintableVoucherModal';
 import { ActivityDetailsModal } from './components/ActivityDetailsModal';
+import { BackOfficeModal } from './components/BackOfficeModal';
 import { LatLngLiteral } from './components/MapsAddressInput';
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -60,6 +61,38 @@ export default function App() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
   const [isPrintVoucherOpen, setIsPrintVoucherOpen] = useState<boolean>(false);
   const [hasCompletedBooking, setHasCompletedBooking] = useState<boolean>(false);
+  const [isBackOfficeOpen, setIsBackOfficeOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check if backoffice hash or query param is set
+    const checkHashOrQuery = () => {
+      const hash = window.location.hash.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      if (
+        hash === '#backoffice' ||
+        params.get('backoffice') === 'true' ||
+        params.get('admin') === 'true'
+      ) {
+        setIsBackOfficeOpen(true);
+      }
+    };
+    checkHashOrQuery();
+    window.addEventListener('hashchange', checkHashOrQuery);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Shortcut Ctrl+Shift+B or Cmd+Shift+B to open Back Office
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'B' || e.key === 'b')) {
+        e.preventDefault();
+        setIsBackOfficeOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('hashchange', checkHashOrQuery);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Derived selected activities objects
   const selectedActivities = useMemo(() => {
@@ -208,7 +241,7 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <Footer />
+        <Footer onOpenBackOffice={() => setIsBackOfficeOpen(true)} />
 
         {/* Sticky Bottom Bar for Mobile & Desktop */}
         <StickyItineraryBar
@@ -256,6 +289,11 @@ export default function App() {
           endDate={endDate}
           currency={currency}
           departureLocation={effectiveDepartureLabel}
+        />
+
+        <BackOfficeModal
+          isOpen={isBackOfficeOpen}
+          onClose={() => setIsBackOfficeOpen(false)}
         />
       </div>
     </APIProvider>

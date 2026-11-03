@@ -1,7 +1,11 @@
 import React from 'react';
 import { ShieldCheck, MapPin, Phone, Mail, Car } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenBackOffice?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenBackOffice }) => {
   return (
     <footer className="border-t border-neutral-800/80 bg-[#07080C] text-neutral-400 text-xs py-12 no-print">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,6 +46,16 @@ export const Footer: React.FC = () => {
             <a href="#how-it-works" className="hover:text-neutral-300 transition-colors">Itinerary Builder</a>
             <a href="#meet-king" className="hover:text-neutral-300 transition-colors">About King</a>
             <a href="https://wa.me/27606487486" className="hover:text-[#FCE9B0] transition-colors">WhatsApp 060 648 7486</a>
+            {onOpenBackOffice && (
+              <button
+                type="button"
+                onClick={onOpenBackOffice}
+                className="text-neutral-600 hover:text-[#DFB45E] transition-colors cursor-pointer"
+                title="Back-Office Bookkeeping & Google Drive"
+              >
+                Back Office (lmakgorogo)
+              </button>
+            )}
           </div>
         </div>
       </div>

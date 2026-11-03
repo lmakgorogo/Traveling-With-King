@@ -193,23 +193,26 @@ async function startServer() {
       // 1. Save to local back-office CSV & JSON Sheet
       appendBookingToSheet(bookingRow);
 
-      // 2. Automatically sync to Marub Creations Google Drive / Google Sheets back-office bookkeeping
+      // 2. Automatically sync to lmakgorogo Google Drive / Google Sheets back-office bookkeeping
       const gdriveWebhookUrl =
-        process.env.MARUBCREATIONS_GDRIVE_WEBHOOK_URL || process.env.GOOGLE_SHEET_WEBHOOK_URL;
+        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
+        process.env.GDRIVE_WEBHOOK_URL ||
+        process.env.GOOGLE_SHEET_WEBHOOK_URL;
       if (gdriveWebhookUrl) {
         const csvContent = fs.readFileSync(BOOKINGS_CSV_PATH, 'utf8');
         fetch(gdriveWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            account: 'marubcreations',
-            ownerEmail: 'lerato@marubcreations.co.za',
+            account: 'lmakgorogo',
+            ownerEmail: 'lmakgorogo@gmail.com',
+            targetFolder: 'Traveling with King Bookings',
             fileName: 'Traveling_With_King_Bookings_Sheet.csv',
             bookingRow,
             csvContent,
           }),
         }).catch((err) => {
-          console.error('[Marub Creations GDrive Sync Error]', err);
+          console.error('[lmakgorogo GDrive Sync Error]', err);
         });
       }
 
@@ -239,9 +242,10 @@ async function startServer() {
         subject ||
         `Booking Confirmation (${bookingReference || 'TWK-CPT'}) - Traveling with King [Awaiting King's Confirmation]`;
 
-      const fromAddress = 'lerato@marubcreations.co.za';
+      const backofficeEmail = process.env.BACKOFFICE_EMAIL || 'lmakgorogo@gmail.com';
+      const fromAddress = process.env.SMTP_FROM || 'lmakgorogo@gmail.com';
 
-      // 4. Send automated confirmation email to client + back-office bookkeeping copy with CSV sheet to lerato@marubcreations.co.za
+      // 4. Send automated confirmation email to client + back-office bookkeeping copy with CSV sheet to lmakgorogo@gmail.com
       if (process.env.SMTP_HOST && process.env.SMTP_USER) {
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
@@ -256,18 +260,18 @@ async function startServer() {
         await transporter.sendMail({
           from: `"Traveling with King" <${fromAddress}>`,
           to: email,
-          replyTo: fromAddress,
+          replyTo: backofficeEmail,
           subject: emailSubject,
           text: body,
           html: html || undefined,
         });
 
-        // Send back-office bookkeeping copy with updated sheet attached to Marub Creations
+        // Send back-office bookkeeping copy with updated sheet attached for lmakgorogo Google Drive
         await transporter.sendMail({
           from: `"Traveling with King Back Office" <${fromAddress}>`,
-          to: fromAddress,
-          subject: `[Back Office Bookkeeping] New Booking ${bookingRow.bookingReference} - ${bookingRow.name}`,
-          text: `Back-office bookkeeping record for ${bookingRow.name} (${bookingRow.bookingReference}). The updated Traveling_With_King_Bookings_Sheet.csv is attached for Marub Creations Google Drive archival.\n\n${body}`,
+          to: backofficeEmail,
+          subject: `[Google Drive Bookkeeping] New Booking ${bookingRow.bookingReference} - ${bookingRow.name}`,
+          text: `Back-office Google Drive bookkeeping record for lmakgorogo.\n\nClient: ${bookingRow.name} (${bookingRow.bookingReference})\nPickup: ${bookingRow.pickupLocation}\nTravel Dates: ${bookingRow.travelDates}\nGuests: ${bookingRow.guestsCount}\nDistance: ${bookingRow.totalDistanceKm} km\nEstimated Total: ${bookingRow.estimatedTotalRange}\n\nThe updated Traveling_With_King_Bookings_Sheet.csv is attached for Google Drive archival.\n\n${body}`,
           attachments: [
             {
               filename: 'Traveling_With_King_Bookings_Sheet.csv',
@@ -289,6 +293,92 @@ async function startServer() {
         success: true,
         warning: 'Dispatched successfully',
       });
+    }
+  });
+
+  // API Route: Check lmakgorogo Google Drive sync status & summary
+  app.get('/api/gdrive/status', (_req, res) => {
+    try {
+      ensureSheetStorage();
+      const raw = fs.readFileSync(BOOKINGS_JSON_PATH, 'utf8');
+      const bookings: StoredBookingRow[] = JSON.parse(raw);
+      const safeBookings = Array.isArray(bookings) ? bookings : [];
+      const webhookUrl =
+        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
+        process.env.GDRIVE_WEBHOOK_URL ||
+        process.env.GOOGLE_SHEET_WEBHOOK_URL ||
+        '';
+
+      res.json({
+        account: 'lmakgorogo',
+        ownerEmail: 'lmakgorogo@gmail.com',
+        targetFolder: 'Traveling with King Bookings',
+        hasWebhookConfigured: Boolean(webhookUrl),
+        webhookUrl: webhookUrl ? `${webhookUrl.slice(0, 25)}...` : null,
+        totalBookings: safeBookings.length,
+        lastBooking: safeBookings[0] || null,
+        lastUpdated: safeBookings[0]?.timestamp || null,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || 'Failed to get GDrive status' });
+    }
+  });
+
+  // API Route: Manually trigger / test sync to lmakgorogo Google Drive
+  app.post('/api/gdrive/sync', async (req, res) => {
+    try {
+      ensureSheetStorage();
+      const raw = fs.readFileSync(BOOKINGS_JSON_PATH, 'utf8');
+      const bookings: StoredBookingRow[] = JSON.parse(raw);
+      const csvContent = fs.readFileSync(BOOKINGS_CSV_PATH, 'utf8');
+
+      const webhookUrl =
+        req.body?.webhookUrl ||
+        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
+        process.env.GDRIVE_WEBHOOK_URL ||
+        process.env.GOOGLE_SHEET_WEBHOOK_URL;
+
+      let webhookDispatched = false;
+      let webhookResponseText = '';
+
+      if (webhookUrl) {
+        try {
+          const resp = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              account: 'lmakgorogo',
+              ownerEmail: 'lmakgorogo@gmail.com',
+              targetFolder: 'Traveling with King Bookings',
+              fileName: 'Traveling_With_King_Bookings_Sheet.csv',
+              totalBookings: bookings.length,
+              bookings,
+              csvContent,
+              syncedAt: new Date().toISOString(),
+            }),
+          });
+          webhookDispatched = true;
+          webhookResponseText = await resp.text().catch(() => 'OK');
+        } catch (fetchErr: any) {
+          console.error('[lmakgorogo Manual GDrive Sync Error]', fetchErr);
+        }
+      }
+
+      res.json({
+        success: true,
+        account: 'lmakgorogo',
+        ownerEmail: 'lmakgorogo@gmail.com',
+        totalBookings: bookings.length,
+        webhookDispatched,
+        webhookResponse:
+          webhookResponseText ||
+          (webhookUrl
+            ? 'Sent'
+            : 'No webhook URL configured; CSV is ready for 1-click import into Google Drive'),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || 'Sync failed' });
     }
   });
 
