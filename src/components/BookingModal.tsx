@@ -25,6 +25,7 @@ import {
   Check,
   Send,
   Lock,
+  Table,
 } from 'lucide-react';
 import { CurrencyCode, formatCurrencyRange } from '../utils/currency';
 
@@ -132,7 +133,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const handleBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Automatically send confirmation email & process back-office bookkeeping in the background
+    // 1. Save booking details to the Bookings Sheet & send confirmation email automatically in the background
     fetch('/api/send-confirmation', {
       method: 'POST',
       headers: {
@@ -149,13 +150,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         pricing,
         subject: confirmationEmail.subject,
         body: confirmationEmail.body,
-        whatsappMessage,
       }),
     }).catch((err) => {
-      console.error('Automated booking dispatch error:', err);
+      console.error('Automated booking sheet & email dispatch error:', err);
     });
 
-    // 2. Automatically dispatch booking inquiry to both WhatsApp numbers (060 648 7486 & 082 400 7223)
+    // 2. Trigger WhatsApp booking inquiry to both WhatsApp numbers (060 648 7486 & 082 400 7223)
     const link1 = document.createElement('a');
     link1.href = whatsappUrlPrimary;
     link1.target = '_blank';
@@ -205,7 +205,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Book Your Tour with King
               </h3>
               <p className="text-xs text-neutral-400 mt-1">
-                Confirm your details below. Clicking <strong className="text-neutral-200">Book Now</strong> automatically sends your confirmation email, dispatches your tour booking via WhatsApp to <strong className="text-neutral-200">060 648 7486</strong> &amp; <strong className="text-neutral-200">082 400 7223</strong>, and unlocks your Official Travel Pass.
+                Confirm your details below. Clicking Book automatically records your booking in the sheet, sends your confirmation email to your inbox, dispatches your tour inquiry via WhatsApp to <strong className="text-neutral-200">060 648 7486</strong> &amp; <strong className="text-neutral-200">082 400 7223</strong>, and unlocks your Official Travel Pass.
               </p>
             </div>
 
@@ -231,7 +231,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <Car className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
                 <span>
                   King's Dedicated Transport ({pricing.totalDays}{' '}
-                  {pricing.totalDays === 1 ? 'Day' : 'Days'} at R11/km · King pays tolls) · Includes Concierge Fee
+                  {pricing.totalDays === 1 ? 'Day' : 'Days'} at R11/km · King pays tolls) · Concierge {pricing.curationFeeLabel}
                 </span>
               </p>
               <div className="pt-2 border-t border-neutral-800/80 space-y-1 text-[11px] text-[#DFB45E]">
@@ -380,17 +380,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   className="w-full py-3.5 px-6 rounded-xl text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-95 transition-all shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Send className="w-4 h-4 text-[#090A0F]" />
-                  <span>Book Now</span>
+                  <span>Book Now (Send Confirmation Email, Save to Sheet &amp; WhatsApp)</span>
                 </button>
               </div>
 
               <p className="text-[11px] text-center text-neutral-500 pt-1">
-                Your confirmation email is automatically sent to <strong className="text-neutral-400">{email || 'your email'}</strong> and your booking is automatically dispatched to <strong className="text-neutral-400">060 648 7486</strong> &amp; <strong className="text-neutral-400">082 400 7223</strong>.
+                Your confirmation email is automatically sent to <strong className="text-neutral-400">{email || 'your email'}</strong>, saved to the Bookings Sheet, and dispatched via WhatsApp to <strong className="text-neutral-400">060 648 7486</strong> &amp; <strong className="text-neutral-400">082 400 7223</strong>.
               </p>
             </form>
           </div>
         ) : (
-          /* Submission Confirmation View: Automatic Email Dispatch + Dual WhatsApp + Unlocked Travel Pass */
+          /* Submission Confirmation View: Automatic Email Dispatch + Sheet Saved + Dual WhatsApp + Unlocked Travel Pass */
           <div className="space-y-5 py-2">
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-[#DFB45E]/15 border border-[#DFB45E] text-[#DFB45E] flex items-center justify-center mx-auto mb-3">
@@ -405,13 +405,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <Check className="w-3.5 h-3.5" />
                   <span>Confirmation Email Sent Automatically</span>
                 </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DFB45E]/15 border border-[#DFB45E]/40 text-[#FCE9B0] text-[11px] font-mono">
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Saved to Bookings Sheet</span>
+                </div>
               </div>
 
               <h3 className="text-2xl font-serif-luxury text-white">
                 Booking Confirmed — Reference {bookingReference}
               </h3>
               <p className="text-xs text-neutral-300 max-w-lg mx-auto mt-1">
-                Your official booking confirmation email has been automatically sent to <strong className="text-white">{email}</strong> and your tour details have been dispatched to <strong className="text-[#FCE9B0]">060 648 7486</strong> and <strong className="text-[#FCE9B0]">082 400 7223</strong>. Your Official Travel Pass is now unlocked below.
+                Your official booking confirmation email has been automatically sent to <strong className="text-white">{email}</strong> and saved in the Bookings Sheet. Tour details have been dispatched to <strong className="text-[#FCE9B0]">060 648 7486</strong> and <strong className="text-[#FCE9B0]">082 400 7223</strong>. Your Official Travel Pass is now unlocked below.
               </p>
             </div>
 
@@ -466,7 +470,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
 
               <div className="bg-[#0B0D17] p-3 rounded-xl border border-neutral-800/80 flex items-center justify-between text-xs font-mono">
-                <span className="text-neutral-300">Total Estimated Cost:</span>
+                <span className="text-neutral-300">Total Estimated Cost (Concierge {pricing.curationFeeLabel}):</span>
                 <span className="text-[#DFB45E] font-bold text-sm">
                   {formatCurrencyRange(pricing.grandTotalMin, pricing.grandTotalMax, currency, false, false)}
                 </span>
@@ -486,7 +490,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <span>View &amp; Download Official Travel Pass (PDF)</span>
             </button>
 
-            {/* Dual WhatsApp Dispatch Buttons */}
+            {/* Dual WhatsApp Dispatch Buttons & Sheet Download */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <a
                 href={whatsappUrlPrimary}
@@ -509,7 +513,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </a>
             </div>
 
-            <div className="pt-2 border-t border-neutral-800 flex items-center justify-end">
+            <div className="pt-2 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <a
+                href="/api/bookings/sheet.csv"
+                download="Traveling_With_King_Bookings_Sheet.csv"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-medium text-[#FCE9B0] hover:text-white bg-neutral-900 border border-neutral-800 hover:border-[#DFB45E]/40 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Table className="w-3.5 h-3.5 text-[#DFB45E]" />
+                <span>Download Bookings Sheet (CSV)</span>
+              </a>
+
               <button
                 type="button"
                 onClick={() => {

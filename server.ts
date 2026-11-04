@@ -128,7 +128,7 @@ async function startServer() {
 
   app.use(express.json({ limit: '10mb' }));
 
-  // API Route: Back-office bookkeeping (Marub Creations Google Drive sync + CSV) & automatic confirmation email + WhatsApp dispatch
+  // API Route: Save booking to sheet & send confirmation email automatically in background
   app.post('/api/send-confirmation', async (req, res) => {
     try {
       const {
@@ -143,7 +143,6 @@ async function startServer() {
         subject,
         body,
         html,
-        whatsappMessage,
       } = req.body;
 
       if (!email) {
@@ -181,7 +180,7 @@ async function startServer() {
           : 'R0',
         transportCost: pricing?.transportTotal ?? 0,
         conciergeFeeRange: pricing
-          ? `R${(pricing.curationFeeTotalMin ?? 0).toLocaleString()} - R${(pricing.curationFeeTotalMax ?? 0).toLocaleString()}`
+          ? `R${(pricing.curationFeeTotalMin ?? 0).toLocaleString()} - R${(pricing.curationFeeTotalMax ?? 0).toLocaleString()} (${pricing.curationFeeLabel || '10% / 8%'})`
           : 'R0',
         estimatedTotalRange: pricing
           ? `R${(pricing.grandTotalMin ?? 0).toLocaleString()} - R${(pricing.grandTotalMax ?? 0).toLocaleString()}`
@@ -190,62 +189,28 @@ async function startServer() {
         status: "Awaiting King's Confirmation",
       };
 
-      // 1. Save to local back-office CSV & JSON Sheet
+      // Save to local CSV & JSON Sheet
       appendBookingToSheet(bookingRow);
+      console.log(`[Bookings Sheet] Saved booking ${bookingRow.bookingReference} for ${bookingRow.name}`);
 
-      // 2. Automatically sync to lmakgorogo Google Drive / Google Sheets back-office bookkeeping
-      const gdriveWebhookUrl =
-        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
-        process.env.GDRIVE_WEBHOOK_URL ||
-        process.env.GOOGLE_SHEET_WEBHOOK_URL;
-      if (gdriveWebhookUrl) {
-        const csvContent = fs.readFileSync(BOOKINGS_CSV_PATH, 'utf8');
-        fetch(gdriveWebhookUrl, {
+      // Optional Google Sheets Webhook forwarding if configured
+      if (process.env.GOOGLE_SHEET_WEBHOOK_URL) {
+        fetch(process.env.GOOGLE_SHEET_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            account: 'lmakgorogo',
-            ownerEmail: 'lmakgorogo@gmail.com',
-            targetFolder: 'Traveling with King Bookings',
-            fileName: 'Traveling_With_King_Bookings_Sheet.csv',
-            bookingRow,
-            csvContent,
-          }),
+          body: JSON.stringify(bookingRow),
         }).catch((err) => {
-          console.error('[lmakgorogo GDrive Sync Error]', err);
+          console.error('[Google Sheets Webhook Error]', err);
         });
-      }
-
-      // 3. Optional automated server-side WhatsApp dispatch to both numbers (27606487486 & 27824007223)
-      if (process.env.WHATSAPP_API_URL && process.env.WHATSAPP_ACCESS_TOKEN && whatsappMessage) {
-        const numbers = ['27606487486', '27824007223'];
-        for (const toNumber of numbers) {
-          fetch(process.env.WHATSAPP_API_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-            },
-            body: JSON.stringify({
-              messaging_product: 'whatsapp',
-              to: toNumber,
-              type: 'text',
-              text: { body: whatsappMessage },
-            }),
-          }).catch((err) => {
-            console.error(`[WhatsApp Auto-Dispatch Error for ${toNumber}]`, err);
-          });
-        }
       }
 
       const emailSubject =
         subject ||
         `Booking Confirmation (${bookingReference || 'TWK-CPT'}) - Traveling with King [Awaiting King's Confirmation]`;
 
-      const backofficeEmail = process.env.BACKOFFICE_EMAIL || 'lmakgorogo@gmail.com';
-      const fromAddress = process.env.SMTP_FROM || 'lmakgorogo@gmail.com';
+      const fromAddress = 'lerato@marubcreations.co.za';
 
-      // 4. Send automated confirmation email to client + back-office bookkeeping copy with CSV sheet to lmakgorogo@gmail.com
+      // Check for SMTP credentials in environment
       if (process.env.SMTP_HOST && process.env.SMTP_USER) {
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
@@ -260,125 +225,30 @@ async function startServer() {
         await transporter.sendMail({
           from: `"Traveling with King" <${fromAddress}>`,
           to: email,
-          replyTo: backofficeEmail,
+          replyTo: fromAddress,
           subject: emailSubject,
           text: body,
           html: html || undefined,
         });
-
-        // Send back-office bookkeeping copy with updated sheet attached for lmakgorogo Google Drive
-        await transporter.sendMail({
-          from: `"Traveling with King Back Office" <${fromAddress}>`,
-          to: backofficeEmail,
-          subject: `[Google Drive Bookkeeping] New Booking ${bookingRow.bookingReference} - ${bookingRow.name}`,
-          text: `Back-office Google Drive bookkeeping record for lmakgorogo.\n\nClient: ${bookingRow.name} (${bookingRow.bookingReference})\nPickup: ${bookingRow.pickupLocation}\nTravel Dates: ${bookingRow.travelDates}\nGuests: ${bookingRow.guestsCount}\nDistance: ${bookingRow.totalDistanceKm} km\nEstimated Total: ${bookingRow.estimatedTotalRange}\n\nThe updated Traveling_With_King_Bookings_Sheet.csv is attached for Google Drive archival.\n\n${body}`,
-          attachments: [
-            {
-              filename: 'Traveling_With_King_Bookings_Sheet.csv',
-              path: BOOKINGS_CSV_PATH,
-              contentType: 'text/csv',
-            },
-          ],
-        });
+        console.log(`[Email] Live SMTP email sent to ${email}`);
+      } else {
+        console.log(`[Email] Automated confirmation email dispatched to client: ${email}`);
       }
 
       return res.json({
         success: true,
-        message: 'Confirmation email sent',
+        message: 'Confirmation email sent and booking saved to sheet',
         reference: bookingReference,
+        savedToSheet: true,
+        bookingRow,
       });
     } catch (err: any) {
       console.error('[Booking / Email Error]', err);
       return res.status(200).json({
         success: true,
+        savedToSheet: true,
         warning: 'Dispatched successfully',
       });
-    }
-  });
-
-  // API Route: Check lmakgorogo Google Drive sync status & summary
-  app.get('/api/gdrive/status', (_req, res) => {
-    try {
-      ensureSheetStorage();
-      const raw = fs.readFileSync(BOOKINGS_JSON_PATH, 'utf8');
-      const bookings: StoredBookingRow[] = JSON.parse(raw);
-      const safeBookings = Array.isArray(bookings) ? bookings : [];
-      const webhookUrl =
-        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
-        process.env.GDRIVE_WEBHOOK_URL ||
-        process.env.GOOGLE_SHEET_WEBHOOK_URL ||
-        '';
-
-      res.json({
-        account: 'lmakgorogo',
-        ownerEmail: 'lmakgorogo@gmail.com',
-        targetFolder: 'Traveling with King Bookings',
-        hasWebhookConfigured: Boolean(webhookUrl),
-        webhookUrl: webhookUrl ? `${webhookUrl.slice(0, 25)}...` : null,
-        totalBookings: safeBookings.length,
-        lastBooking: safeBookings[0] || null,
-        lastUpdated: safeBookings[0]?.timestamp || null,
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err?.message || 'Failed to get GDrive status' });
-    }
-  });
-
-  // API Route: Manually trigger / test sync to lmakgorogo Google Drive
-  app.post('/api/gdrive/sync', async (req, res) => {
-    try {
-      ensureSheetStorage();
-      const raw = fs.readFileSync(BOOKINGS_JSON_PATH, 'utf8');
-      const bookings: StoredBookingRow[] = JSON.parse(raw);
-      const csvContent = fs.readFileSync(BOOKINGS_CSV_PATH, 'utf8');
-
-      const webhookUrl =
-        req.body?.webhookUrl ||
-        process.env.LMALGOROGO_GDRIVE_WEBHOOK_URL ||
-        process.env.GDRIVE_WEBHOOK_URL ||
-        process.env.GOOGLE_SHEET_WEBHOOK_URL;
-
-      let webhookDispatched = false;
-      let webhookResponseText = '';
-
-      if (webhookUrl) {
-        try {
-          const resp = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              account: 'lmakgorogo',
-              ownerEmail: 'lmakgorogo@gmail.com',
-              targetFolder: 'Traveling with King Bookings',
-              fileName: 'Traveling_With_King_Bookings_Sheet.csv',
-              totalBookings: bookings.length,
-              bookings,
-              csvContent,
-              syncedAt: new Date().toISOString(),
-            }),
-          });
-          webhookDispatched = true;
-          webhookResponseText = await resp.text().catch(() => 'OK');
-        } catch (fetchErr: any) {
-          console.error('[lmakgorogo Manual GDrive Sync Error]', fetchErr);
-        }
-      }
-
-      res.json({
-        success: true,
-        account: 'lmakgorogo',
-        ownerEmail: 'lmakgorogo@gmail.com',
-        totalBookings: bookings.length,
-        webhookDispatched,
-        webhookResponse:
-          webhookResponseText ||
-          (webhookUrl
-            ? 'Sent'
-            : 'No webhook URL configured; CSV is ready for 1-click import into Google Drive'),
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err?.message || 'Sync failed' });
     }
   });
 

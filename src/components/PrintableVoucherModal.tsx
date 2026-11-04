@@ -295,7 +295,7 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             </span>
           </div>
           <div className="flex justify-between text-neutral-300">
-            <span>Concierge Fee</span>
+            <span>Concierge Fee ({pricing.curationFeeLabel})</span>
             <span className="font-mono">
               {formatCurrencyRange(pricing.curationFeeTotalMin, pricing.curationFeeTotalMax, currency)}
             </span>
@@ -310,6 +310,10 @@ export const PrintableVoucherModal: React.FC<PrintableVoucherModalProps> = ({
             <div className="flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
               <span>* Tolls &amp; Food Policy: King pays all road tolls along your route. Food/meals are excluded and for the guest's own account.</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-[#DFB45E] shrink-0" />
+              <span>* Concierge Policy: Calculated at 10% up to R10,000, and 8% for totals above R10,000.</span>
             </div>
           </div>
         </div>

@@ -581,9 +581,14 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                   {/* 3. Concierge Fee */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-white font-medium block">Concierge Fee</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-white font-medium">Concierge Fee</span>
+                        <span className="text-[10px] text-[#DFB45E] font-mono">
+                          {pricing.curationFeeLabel}
+                        </span>
+                      </div>
                       <span className="text-[11px] text-neutral-400 block">
-                        Private route planning &amp; tour coordination
+                        10% up to R10,000 · 8% for trips over R10,000 (King pays road tolls)
                       </span>
                     </div>
                     <div className="text-right">
@@ -620,7 +625,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                 <div className="mb-6 p-3 rounded-xl bg-[#DFB45E]/10 border border-[#DFB45E]/30 flex items-start gap-2.5 text-xs text-[#FCE9B0]">
                   <Info className="w-4 h-4 text-[#DFB45E] shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed">
-                    <strong className="font-semibold text-white">Included &amp; Excluded:</strong> King pays all road tolls along your route. Food and meals are not arranged by King and are for the guest's own account.
+                    <strong className="font-semibold text-white">Included &amp; Excluded:</strong> King pays all road tolls along your route. Food and meals are not arranged by King and are for the guest's own account. Concierge is calculated at 10% up to R10,000 and 8% for totals above R10,000.
                   </p>
                 </div>
 
@@ -643,7 +648,7 @@ export const ItinerarySection: React.FC<ItinerarySectionProps> = ({
                       className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-[#090A0F] bg-gradient-to-r from-[#DFB45E] via-[#FCE9B0] to-[#BA8936] hover:brightness-110 active:scale-[0.99] transition-all shadow-lg gold-glow flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <MessageSquare className="w-4 h-4 text-[#090A0F]" />
-                      <span>Book Now</span>
+                      <span>Book with King via WhatsApp</span>
                     </button>
                   )}
 

@@ -740,7 +740,12 @@ export function calculatePricing(
   const maxConcierge = calculateConciergeFee(subtotalMax);
 
   const curationFeeRate = subtotalMax > CONCIERGE_THRESHOLD ? 0.08 : avgConcierge.rate;
-  const curationFeeLabel = 'Private Tour Coordination';
+  const curationFeeLabel =
+    subtotalMin > CONCIERGE_THRESHOLD
+      ? '8% (Over R10,000)'
+      : subtotalMax > CONCIERGE_THRESHOLD
+      ? '10% (≤ R10k) · 8% (> R10k)'
+      : '10% (Up to R10k · 8% over R10k)';
 
   const curationFeeTotal = avgConcierge.fee;
   const curationFeeTotalMin = Math.min(minConcierge.fee, maxConcierge.fee);
@@ -847,7 +852,7 @@ export function formatWhatsAppMessage(
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `• Activity Entry & Conservation Fees (${visitorLabel}): R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
   message += `• Private Chauffeured Transport (${pricing.totalDays} Days): R${pricing.transportTotal.toLocaleString()} (${pricing.totalDistanceKm} km @ R${pricing.ratePerKm}/km · King pays tolls)\n`;
-  message += `• Concierge Fee: R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
+  message += `• Concierge Fee (${pricing.curationFeeLabel}): R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
   message += `• *TOTAL ESTIMATED COST*: *R${pricing.grandTotalMin.toLocaleString()} - R${pricing.grandTotalMax.toLocaleString()}*\n\n`;
 
   message += `_Note: King pays all road tolls along your route. Food/meals are not arranged by King and are for the guest's own account. Prices may vary according to peak season rates._\n\n`;
@@ -875,7 +880,7 @@ export function formatConfirmationEmail(
   subject: string;
   body: string;
 } {
-  const fromEmail = 'lmakgorogo@gmail.com';
+  const fromEmail = 'lerato@marubcreations.co.za';
   const fromName = 'Traveling with King';
   const toEmail = clientEmail ? clientEmail.trim() : '';
 
@@ -927,12 +932,12 @@ export function formatConfirmationEmail(
   body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   body += `• Activity Entrance & Conservation Fees (${visitorLabel}): R${pricing.activitiesTotalMin.toLocaleString()} - R${pricing.activitiesTotalMax.toLocaleString()}\n`;
   body += `• Dedicated Private Transport (${pricing.totalDistanceKm} km round trip @ R${pricing.ratePerKm}/km · King pays road tolls): R${pricing.transportTotal.toLocaleString()}\n`;
-  body += `• Concierge Fee: R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
+  body += `• Concierge Fee (${pricing.curationFeeLabel}): R${pricing.curationFeeTotalMin.toLocaleString()} - R${pricing.curationFeeTotalMax.toLocaleString()}\n`;
   body += `• ESTIMATED COST: R${pricing.grandTotalMin.toLocaleString()} - R${pricing.grandTotalMax.toLocaleString()}\n\n`;
   body += `IMPORTANT NOTE: King pays all road tolls along your route. Food/meals are not arranged by King and are for the guest's own account.\n\n`;
 
   body += `NEXT STEPS:\n`;
-  body += `Your booking details have been dispatched to King and are currently awaiting final schedule confirmation. We will reach out to you directly via WhatsApp/Phone (060 648 7486) or email to finalize your pickup time.\n\n`;
+  body += `Your booking details have been saved and dispatched to King and are currently awaiting final schedule confirmation. We will reach out to you directly via WhatsApp/Phone (060 648 7486) or email to finalize your pickup time.\n\n`;
   body += `Warm regards,\n\n`;
   body += `Traveling with King Private Chauffeur & Tours\n`;
   body += `Direct / WhatsApp: 060 648 7486\n`;
